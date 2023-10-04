@@ -4,115 +4,144 @@ import javax.swing.plaf.basic.BasicSplitPaneUI;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 
+/**
+ * The frame for the window that comprises the entire level editor application.
+ */
 public class EditorWindow extends JFrame {
 
+    /** The control panels for the level editor */
     private JPanel bottomPanel, sidePanel;
-    JSplitPane splitPane1, splitPane2;
-    private Container contentPane;
+
+    /** The panel which serves a viewport for the level preview. */
     private LevelGrid levelGrid;
 
-    private Color levelColor, panelColors, splitPaneColor;
+    /** The split panes that contain the 3 main panels of the editor. */
+    private JSplitPane splitPane1, splitPane2;
 
+    /** Colors of various elements in the editor. */
+    private final Color LEVEL_COLOR, PANEL_COLOR, SPLITPANE_COLOR;
+
+    /** The width/height of the level grid in number of tiles. */
+    private final int LEVEL_WIDTH = 30;
+    private final int LEVEL_HEIGHT = 30;
+
+    /** The menu bar of the application. It holds the "File", "Edit", and "Help" buttons. */
     private JMenuBar menuBar;
+
+    /** The file/edit/help buttons in the menu bar. */
     private JMenu fileMenu, editMenu, helpMenu;
 
+    /** Open/Exit options in the file menu button dropdown. */
     private JMenuItem openFile, exit;
 
+    /**
+     * Sets up the main editor window and all components within it.
+     * @param width The starting and minimum width of the window.
+     * @param height The starting and minimum height of the window.
+     */
     public EditorWindow(int width, int height) {
         super("Level Editor");
 
         Dimension resolution = Toolkit.getDefaultToolkit().getScreenSize(); // Get resolution of display
 
+        // Set the resolution of the window and center it in the middle of the user's screen
         setBounds((resolution.width - width) / 2, (resolution.height - height) / 2, width, height);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(width, height));
 
-        levelColor = new Color(160, 160, 168);
-        panelColors = new Color(74, 75, 79);
-        splitPaneColor = new Color(57, 59, 64);
+        // Initialize the values of the colors used throughout the application
+        LEVEL_COLOR = new Color(160, 160, 168);
+        PANEL_COLOR = new Color(74, 75, 79);
+        SPLITPANE_COLOR = new Color(57, 59, 64);
 
         // Set up content pane
-        contentPane = getContentPane();
+        Container contentPane = getContentPane();
         contentPane.setPreferredSize(new Dimension(width, height));
-        contentPane.setBackground(Color.CYAN);
+        contentPane.setBackground(Color.CYAN); // For debugging if elements don't show up correctly
 
         // Set up bottom panel (will hold custom game objects)
         bottomPanel = new JPanel();
         bottomPanel.setPreferredSize(new Dimension(width, 90));
-        bottomPanel.setBackground(panelColors);
+        bottomPanel.setBackground(PANEL_COLOR);
 
         // Set up side control panel
         sidePanel = new JPanel();
         sidePanel.setPreferredSize(new Dimension(180, height));
-        sidePanel.setBackground(panelColors);
+        sidePanel.setBackground(PANEL_COLOR);
 
         // Set up level grid
-        levelGrid = new LevelGrid(30, 30);
-        levelGrid.setBackground(levelColor);
+        levelGrid = new LevelGrid(LEVEL_WIDTH, LEVEL_HEIGHT);
+        levelGrid.setBackground(LEVEL_COLOR);
 
-        // Set up split panes
+        // Set up split pane between the level preview and bottom control panel
         splitPane1 = new JSplitPane(JSplitPane.VERTICAL_SPLIT, levelGrid, bottomPanel);
-        splitPane1.setUI(new BasicSplitPaneUI() {
-            public BasicSplitPaneDivider createDefaultDivider() {
-                return new BasicSplitPaneDivider(this) {
-                    public void paint(Graphics g) {
-                        // Set the divider's background color
-                        g.setColor(splitPaneColor); // Change this to the desired color
-                        g.fillRect(0, 0, getWidth(), getHeight());
-                    }
-                };
-            }
-        });
+        splitPane1.setUI(customDivider(SPLITPANE_COLOR));
         splitPane1.setResizeWeight(0.75);
         splitPane1.setDividerSize(4);
         splitPane1.setBorder(null);
         ((BasicSplitPaneDivider) splitPane1.getComponent(2)).setBorder(null);
 
+        // Set up split pane between previous split pane (level view and bottom panel) and the side control panel
         splitPane2 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, splitPane1, sidePanel);
-        splitPane2.setUI(new BasicSplitPaneUI() {
-            public BasicSplitPaneDivider createDefaultDivider() {
-                return new BasicSplitPaneDivider(this) {
-                    public void paint(Graphics g) {
-                        // Set the divider's background color
-                        g.setColor(splitPaneColor); // Change this to the desired color
-                        g.fillRect(0, 0, getWidth(), getHeight());
-                    }
-                };
-            }
-        });
+        splitPane2.setUI(customDivider(SPLITPANE_COLOR));
         splitPane2.setResizeWeight(0.75);
         splitPane2.setDividerSize(4);
         splitPane2.setBorder(null);
         ((BasicSplitPaneDivider) splitPane2.getComponent(2)).setBorder(null);
 
-        contentPane.add(splitPane2);
+        contentPane.add(splitPane2); // Add all control panels to the content pane
 
         // Menu bar stuff
         // TODO: Add event handling to menu bar
         menuBar = new JMenuBar();
 
+        // Create the menu buttons
         fileMenu = new JMenu("File");
-        fileMenu.setMnemonic(KeyEvent.VK_F);
+        editMenu = new JMenu("Edit");
+        helpMenu = new JMenu("Help");
 
+        // Assigns a key to each menu button
+        fileMenu.setMnemonic(KeyEvent.VK_F);
+        editMenu.setMnemonic(KeyEvent.VK_E);
+        helpMenu.setMnemonic(KeyEvent.VK_H);
+
+        // Create and add menu items to the "File" menu
         openFile = new JMenuItem("Open file");
         exit = new JMenuItem("Exit");
         fileMenu.add(openFile);
         fileMenu.add(exit);
 
         menuBar.add(fileMenu);
-
-        editMenu = new JMenu("Edit");
-        editMenu.setMnemonic(KeyEvent.VK_E);
         menuBar.add(editMenu);
-
-        helpMenu = new JMenu("Help");
-        helpMenu.setMnemonic(KeyEvent.VK_H);
         menuBar.add(helpMenu);
 
-        setJMenuBar(menuBar);
+        setJMenuBar(menuBar); // This adds it to the top of the screen/window
 
-        pack();
+        pack(); // Removes any unnecessary space
 
-        setVisible(true);
+        setVisible(true); // After adding everything, make it visible.
+    }
+
+    /**
+     Generates a custom split pane divider.
+     @param dividerColor The desired color of the split pane divider.
+     @return A BasicSplitPaneUI object which can be passed to a split pane's setUI() function to assign the new divider.
+     */
+    public BasicSplitPaneUI customDivider(Color dividerColor) {
+        return new BasicSplitPaneUI() {
+
+            @Override
+            public BasicSplitPaneDivider createDefaultDivider() {
+                return new BasicSplitPaneDivider(this) {
+
+                    @Override
+                    public void paint(Graphics g) {
+                        // Set the divider's background color
+                        g.setColor(dividerColor); // Change this to the desired color
+                        g.fillRect(0, 0, getWidth(), getHeight());
+                    }
+                };
+            }
+        };
     }
 }

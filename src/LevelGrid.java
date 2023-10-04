@@ -2,17 +2,40 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 
+/**
+ * The viewport for the level editor. Allows the user to zoom and pan around the level's grid.
+ */
 public class LevelGrid extends JPanel implements MouseWheelListener, MouseListener, MouseMotionListener {
 
+    /** The level's grid of tiles. */
     private Tile[][] tiles;
+
+    /** The width/height of the level's grid. */
     private int width, height;
+
+    /** The zoom scale of viewport. The higher the value, the more zoomed in the grid appears. */
     private double scale;
     private final double MIN_SCALE = 0.3;
     private final double MAX_SCALE = 3;
+
+    /** The previous location that the mouse was last clicked on the viewport. Used to track panning. */
     private Point prevPoint;
-    private int xOffset, yOffset, xPosition, yPosition;
+
+    /** The x/y offset of the viewport during panning. */
+    private int xOffset, yOffset;
+
+    /** The current x/y position of the viewport. */
+    private int xPosition, yPosition;
+
+    /** The button used to reset the viewport to its original position and scale. */
     private JButton resetPosition;
 
+    /**
+     * Initializes a new instance of the level editor's viewport.
+     *
+     * @param width The number of tiles in the horizontal direction.
+     * @param height The number of tiles in the vertical direction.
+     */
     public LevelGrid(int width, int height) {
         // Initialize values
         this.width = width;
@@ -38,8 +61,9 @@ public class LevelGrid extends JPanel implements MouseWheelListener, MouseListen
             repaint();
         });
 
-        add(resetPosition);
+        add(resetPosition); // Add the button to the panel
 
+        // Add the necessary mouse input listeners for moving the viewport
         addMouseWheelListener(this);
         addMouseListener(this);
         addMouseMotionListener(this);
@@ -52,10 +76,18 @@ public class LevelGrid extends JPanel implements MouseWheelListener, MouseListen
         }
     }
 
+    /**
+     * Draws the grid of tiles to the viewport.
+     *
+     * @param g2 The Graphics2D object to handle the graphics resources.
+     */
     public void drawTiles(Graphics2D g2) {
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 g2.setColor(Color.DARK_GRAY);
+
+                // Draw a rectangle for each tile
+                // TODO: Optimize by removing redundant line draws (lines where rectangles are drawn over each other)
                 g2.drawRect((int) (x * 16 * scale) + xOffset + xPosition,
                         (int) (y * 16 * scale) + yOffset + yPosition,
                         (int) (16 * scale),
@@ -65,6 +97,7 @@ public class LevelGrid extends JPanel implements MouseWheelListener, MouseListen
         }
     }
 
+    @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g); // Clear panel
 
@@ -79,57 +112,55 @@ public class LevelGrid extends JPanel implements MouseWheelListener, MouseListen
 
     @Override
     public void mouseWheelMoved(MouseWheelEvent e) {
-        scale -= 0.1 * e.getWheelRotation();
-        scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));
+        scale -= 0.1 * e.getWheelRotation(); // Change the scale based on scroll direction
+        scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale)); // Clamp the scale factor
 
-        repaint();
+        repaint(); // Repaint the viewport
     }
 
     @Override
-    public void mouseClicked(MouseEvent e) {
-
-    }
+    public void mouseClicked(MouseEvent e) {}
 
     @Override
     public void mousePressed(MouseEvent e) {
         if (SwingUtilities.isMiddleMouseButton(e)) {
-            prevPoint = e.getPoint();
-            repaint();
+            prevPoint = e.getPoint(); // Store the mouse's current position
         }
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
         if (SwingUtilities.isMiddleMouseButton(e)) {
+            // Finalize the viewport's position (i.e., the displacement is saved)
             xPosition += xOffset;
             yPosition += yOffset;
+
+            // Reset the offset value
             xOffset = 0;
             yOffset = 0;
-            repaint();
+
+            repaint(); // Repaint the viewport
         }
     }
 
     @Override
-    public void mouseEntered(MouseEvent e) {
-
-    }
+    public void mouseEntered(MouseEvent e) {}
 
     @Override
-    public void mouseExited(MouseEvent e) {
-
-    }
+    public void mouseExited(MouseEvent e) {}
 
     @Override
     public void mouseDragged(MouseEvent e) {
         if (SwingUtilities.isMiddleMouseButton(e)) {
+            // Calculate the difference between the mouse's current position
+            // and where the middle mouse button was originally pressed.
             xOffset = e.getPoint().x - prevPoint.x;
             yOffset = e.getPoint().y - prevPoint.y;
-            repaint();
+
+            repaint(); // Repaint the viewport
         }
     }
 
     @Override
-    public void mouseMoved(MouseEvent e) {
-
-    }
+    public void mouseMoved(MouseEvent e) {}
 }
