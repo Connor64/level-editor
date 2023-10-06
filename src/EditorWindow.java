@@ -13,7 +13,7 @@ public class EditorWindow extends JFrame {
     private JPanel bottomPanel, sidePanel;
 
     /** The panel which serves a viewport for the level preview. */
-    private LevelGrid levelGrid;
+    private LevelCanvas levelGrid;
 
     /** The split panes that contain the 3 main panels of the editor. */
     private JSplitPane splitPane1, splitPane2;
@@ -70,7 +70,7 @@ public class EditorWindow extends JFrame {
         sidePanel.setBackground(PANEL_COLOR);
 
         // Set up level grid
-        levelGrid = new LevelGrid(LEVEL_WIDTH, LEVEL_HEIGHT);
+        levelGrid = new LevelCanvas(LEVEL_WIDTH, LEVEL_HEIGHT);
         levelGrid.setBackground(LEVEL_COLOR);
 
         // Set up split pane between the level preview and bottom control panel

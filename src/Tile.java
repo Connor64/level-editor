@@ -10,7 +10,10 @@ public class Tile extends JLabel {
     /** The ID of the sprite that the tile uses from its tileset. */
     private int spriteID;
 
+    public boolean exists;
+
     public Tile() {
+        exists = false;
         // TODO: Add stuff
     }
 }
