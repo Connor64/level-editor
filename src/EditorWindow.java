@@ -65,7 +65,7 @@ public class EditorWindow extends JFrame {
         bottomPanel.setBackground(PANEL_COLOR);
 
         // Set up side control panel
-        sidePanel = new JPanel();
+        sidePanel = new ToolsPanel();
         sidePanel.setPreferredSize(new Dimension(180, height));
         sidePanel.setBackground(PANEL_COLOR);
 
