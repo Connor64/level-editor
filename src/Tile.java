@@ -1,9 +1,10 @@
 import javax.swing.*;
+import java.awt.image.BufferedImage;
 
 /**
  * An object class that uses a sprite from a specified tile set. It comprises the grid that is the basis of a level.
  */
-public class Tile extends JLabel {
+public class Tile {
     /** The ID of the tileset this tile uses. */
     private int tilesetID;
 
@@ -12,8 +13,19 @@ public class Tile extends JLabel {
 
     public boolean exists;
 
+    public BufferedImage sprite;
+
     public Tile() {
         exists = false;
         // TODO: Add stuff
+    }
+
+    public void setSprite(BufferedImage sprite) {
+        exists = (sprite != null);
+        this.sprite = sprite;
+    }
+
+    public BufferedImage getSprite() {
+        return sprite;
     }
 }

@@ -1,6 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImageOp;
 
 /**
  * The canvas for the level editor. Allows the user to zoom and pan around the level's grid and paint tiles.
@@ -124,9 +125,14 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
                 int newX = (int) (x * scaledSize) + xPos;
                 int newY = (int) (y * scaledSize) + yPos;
 
-                Rectangle rec = new Rectangle(newX, newY, (int) (scaledSize), (int) (scaledSize));
-                g2.draw(rec);
-                g2.fill(rec);
+                if (EditorManager.selectedTile != null) {
+                    g2.drawImage(EditorManager.selectedTile, newX, newY, this);
+                }
+
+//                Rectangle rec = new Rectangle(newX, newY, (int) (scaledSize), (int) (scaledSize));
+//                g2.draw(rec);
+//                g2.drawImage();
+//                g2.fill(rec);
             }
         }
     }
@@ -158,7 +164,7 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
 
         // If the coordinates are within the bounds of the array
         if ((x >= 0 && x < width) && (y >= 0 && y < height)) {
-            tiles[x][y].exists = true;
+            tiles[x][y].setSprite(EditorManager.selectedTile);
         }
 
         repaint();
@@ -179,6 +185,7 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 tiles[x][y].exists = false;
+                tiles[x][y].setSprite(null);
             }
         }
 
