@@ -3,6 +3,7 @@ import javax.swing.plaf.basic.BasicSplitPaneDivider;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.awt.image.BufferedImage;
 
 /**
  * The frame for the window that comprises the entire level editor application.
@@ -10,7 +11,8 @@ import java.awt.event.KeyEvent;
 public class EditorWindow extends JFrame {
 
     /** The control panels for the level editor */
-    private JPanel bottomPanel, sidePanel;
+    private JPanel bottomPanel;
+    private ToolsPanel sidePanel;
 
     /** The panel which serves a viewport for the level preview. */
     private LevelCanvas levelGrid;
@@ -70,7 +72,7 @@ public class EditorWindow extends JFrame {
         sidePanel.setBackground(PANEL_COLOR);
 
         // Set up level grid
-        levelGrid = new LevelCanvas(LEVEL_WIDTH, LEVEL_HEIGHT);
+        levelGrid = new LevelCanvas(LEVEL_WIDTH, LEVEL_HEIGHT, this);
         levelGrid.setBackground(LEVEL_COLOR);
 
         // Set up split pane between the level preview and bottom control panel
@@ -143,5 +145,12 @@ public class EditorWindow extends JFrame {
                 };
             }
         };
+    }
+
+    public Tile getCurrentTile() {
+        Tileset tileset = sidePanel.getCurrentTileset();
+        if (tileset == null) return null;
+
+        return tileset.getCurrentTile();
     }
 }

@@ -1,7 +1,6 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.image.BufferedImageOp;
 
 /**
  * The canvas for the level editor. Allows the user to zoom and pan around the level's grid and paint tiles.
@@ -50,13 +49,15 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
      */
     private JButton resetButton;
 
+    private final EditorWindow PARENT_WINDOW;
+
     /**
      * Initializes a new instance of the level editor's viewport.
      *
      * @param width  The number of tiles in the horizontal direction.
      * @param height The number of tiles in the vertical direction.
      */
-    public LevelCanvas(int width, int height) {
+    public LevelCanvas(int width, int height, EditorWindow parent) {
         // Initialize values
         this.width = width;
         this.height = height;
@@ -67,6 +68,8 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         yOffset = 0;
         xPosition = 0;
         yPosition = 0;
+
+        PARENT_WINDOW = parent;
 
         setLayout(new FlowLayout(FlowLayout.LEFT, 1, 1));
 
@@ -82,13 +85,6 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         addMouseWheelListener(this);
         addMouseListener(this);
         addMouseMotionListener(this);
-
-        // Set up tile objects
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                tiles[x][y] = new Tile();
-            }
-        }
     }
 
     /**
@@ -116,23 +112,17 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
 
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                if (!tiles[x][y].exists) continue;
+                if (tiles[x][y] == null) continue;
 
                 // Create filled square if it exists
-
                 g2.setColor(Color.DARK_GRAY);
 
                 int newX = (int) (x * scaledSize) + xPos;
                 int newY = (int) (y * scaledSize) + yPos;
+                int scaledSizeInt = (int) Math.ceil(scaledSize);
 
-                if (EditorManager.selectedTile != null) {
-                    g2.drawImage(EditorManager.selectedTile, newX, newY, this);
-                }
-
-//                Rectangle rec = new Rectangle(newX, newY, (int) (scaledSize), (int) (scaledSize));
-//                g2.draw(rec);
-//                g2.drawImage();
-//                g2.fill(rec);
+                // Draw current tile
+                tiles[x][y].draw(g2, newX, newY, scaledSizeInt, this);
             }
         }
     }
@@ -164,7 +154,7 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
 
         // If the coordinates are within the bounds of the array
         if ((x >= 0 && x < width) && (y >= 0 && y < height)) {
-            tiles[x][y].setSprite(EditorManager.selectedTile);
+            tiles[x][y] = PARENT_WINDOW.getCurrentTile();
         }
 
         repaint();
@@ -184,8 +174,7 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         // Reset tiles
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                tiles[x][y].exists = false;
-                tiles[x][y].setSprite(null);
+                tiles[x][y] = null;
             }
         }
 
