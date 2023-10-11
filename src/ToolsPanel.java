@@ -15,6 +15,9 @@ public class ToolsPanel extends JPanel {
      * TODO: move this feature to the menu bar.
      */
     private JButton testButton;
+    private JButton selectButton, drawButton, eraseButton;
+    private JPanel tilesetPanel;
+    private JComboBox<Tileset> tilesetDropdown;
 
     /** The file chooser used to select images to generate tilesets from*/
     private final JFileChooser fileChooser;
@@ -29,7 +32,7 @@ public class ToolsPanel extends JPanel {
      * Instantiates a tool panel object.
      */
     public ToolsPanel() {
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        setLayout(new GridBagLayout());
         tilesets = new ArrayList<>();
         currentTileset = -1; // Indicates there is no tileset
 
@@ -52,7 +55,48 @@ public class ToolsPanel extends JPanel {
             }
         });
 
-        add(testButton);
+        tilesetPanel = new JPanel();
+
+        tilesetDropdown = new JComboBox<>(); // TODO: Make it so dropdown is populated when loading from file
+        tilesetDropdown.setAlignmentX(Component.CENTER_ALIGNMENT);
+        tilesetDropdown.addActionListener(e -> {
+            setTileset(tilesetDropdown.getSelectedIndex());
+        });
+
+        selectButton = new JButton("Select");
+        drawButton = new JButton("Draw");
+        eraseButton = new JButton("Erase");
+
+        GridBagConstraints gc = new GridBagConstraints();
+        gc.gridx = 0;
+        gc.gridy = 0;
+        add(selectButton, gc);
+
+        gc.gridx = 1;
+        add(drawButton, gc);
+
+        gc.gridx = 2;
+        add(eraseButton, gc);
+
+        gc.gridx = 1;
+        gc.gridy = 1;
+        add(testButton, gc);
+
+        gc.gridx = 0;
+        gc.gridy = 2;
+//        gc.weightx = 1.0;
+        gc.weighty = 1.0;
+        gc.gridwidth = 3;
+        gc.fill = GridBagConstraints.BOTH;
+        add(tilesetPanel, gc);
+
+        gc.gridx = 1;
+        gc.gridy = 3;
+        gc.weightx = 1.0;
+        gc.weighty = 0.1;
+        gc.gridwidth = 1;
+        gc.fill = GridBagConstraints.NONE;
+        add(tilesetDropdown, gc);
     }
 
     /**
@@ -73,15 +117,8 @@ public class ToolsPanel extends JPanel {
         if (tileSize == -1) return; // If the user quits the prompt, end the import process.
 
         // Add the new tileset to the arraylist of tilesets
-        tilesets.add(new Tileset(tileSize, image, currentTileset));
-
-        // Remove the old tileset and add the new tileset to the panel.
-        if (currentTileset >= 0) remove(tilesets.get(currentTileset));
-        currentTileset++;
-        add(tilesets.get(currentTileset));
-
-        revalidate();
-        repaint();
+        addTileset(new Tileset(tileSize, image, tilesets.size()));
+        currentTileset = tilesets.size() - 1;
     }
 
     /**
@@ -101,20 +138,24 @@ public class ToolsPanel extends JPanel {
         JLabel imagePreview = new JLabel(new ImageIcon(image));
         JLabel imageSize = new JLabel(image.getWidth() + " x " + image.getHeight());
         imageSize.setBorder(new EmptyBorder(0, 0, 15, 0));
-        JLabel instructionLabel = new JLabel("Specify tile size:");
+        JLabel sizeInstruction = new JLabel("Specify tile size:");
         JTextField sizeField = new JTextField(4);
         sizeField.setHorizontalAlignment(JTextField.CENTER);
+        JLabel nameInstruction = new JLabel("Enter a name for the tileset:");
+        JTextField nameField = new JTextField();
+
+        Component[] components = {
+                imagePreview, imageSize,
+                sizeInstruction, sizeField,
+                nameInstruction, nameField,
+        };
 
         // Add elements to the panel vertically
         gc.gridx = 0;
-        gc.gridy = 0;
-        importPanel.add(imagePreview, gc);
-        gc.gridy = 1;
-        importPanel.add(imageSize, gc);
-        gc.gridy = 2;
-        importPanel.add(instructionLabel, gc);
-        gc.gridy = 3;
-        importPanel.add(sizeField, gc);
+        for (int i = 0; i < components.length; i++) {
+            gc.gridy = i;
+            importPanel.add(components[i], gc);
+        }
 
         // Loop over the user input prompt until valid input is received or user quits
         int tileSize;
@@ -163,8 +204,27 @@ public class ToolsPanel extends JPanel {
     }
 
     public Tileset getCurrentTileset() {
-        if (currentTileset == -1) return null;
+        if (currentTileset < 0) return null;
 
+        System.out.println("not null");
         return tilesets.get(currentTileset);
+    }
+
+    private void setTileset(int index) {
+        currentTileset = Math.max(Math.min(index, tilesets.size()), 0);
+        tilesetPanel.removeAll();
+        tilesetPanel.add(tilesets.get(index));
+        revalidate();
+        repaint();
+    }
+
+    public void addTileset(Tileset tileset) {
+        if (!tilesets.contains(tileset)) {
+            tilesets.add(tileset);
+            tilesetDropdown.addItem(tileset);
+            tilesetDropdown.setSelectedIndex(tilesetDropdown.getItemCount() - 1);
+        }
+
+        setTileset(tilesets.size() - 1);
     }
 }

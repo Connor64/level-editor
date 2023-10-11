@@ -14,6 +14,7 @@ public class Tileset extends JPanel {
     private final int ROWS;
     private final int COLUMNS;
     private int currentTile;
+    private int tilesetID;
 
     /**
      * Instantiates a tileset object containing all tiles of a specified size.
@@ -25,6 +26,7 @@ public class Tileset extends JPanel {
     public Tileset(int tileSize, BufferedImage image, int tilesetID) {
         this.tileSize = tileSize;
         currentTile = 0;
+        this.tilesetID = tilesetID;
 
         // Create a container for the tile buttons
         JPanel buttonContainer = new JPanel();
@@ -108,6 +110,11 @@ public class Tileset extends JPanel {
 
     public int getCurrentTileIndex() {
         return currentTile;
+    }
+
+    @Override
+    public String toString() {
+        return ("Tileset: " + tilesetID);
     }
 
 }
