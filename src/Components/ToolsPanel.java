@@ -1,3 +1,7 @@
+package Components;
+
+import Core.EditorWindow;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -11,10 +15,6 @@ import java.util.ArrayList;
  * A JPanel which contains controls for the level editor and all tilesets' sprites.
  */
 public class ToolsPanel extends JPanel {
-    /** A test button which initiates the file importing process for making tilesets.
-     * TODO: move this feature to the menu bar.
-     */
-    private JButton testButton;
     private JButton selectButton, drawButton, eraseButton;
     private JPanel tilesetPanel;
     private JComboBox<Tileset> tilesetDropdown;
@@ -28,10 +28,14 @@ public class ToolsPanel extends JPanel {
     /** The index of the currently selected tileset. */
     private int currentTileset;
 
+    private final EditorWindow EDITOR;
+
     /**
-     * Instantiates a tool panel object.
+     * Instantiates a tool panel object and sets up all of its components.
      */
-    public ToolsPanel() {
+    public ToolsPanel(EditorWindow editor) {
+        EDITOR = editor;
+
         setLayout(new GridBagLayout());
         tilesets = new ArrayList<>();
         currentTileset = -1; // Indicates there is no tileset
@@ -44,28 +48,41 @@ public class ToolsPanel extends JPanel {
         );
         fileChooser.setFileFilter(filter);
 
-        // Assign button action to prompt user to import an image for a tileset
-        testButton = new JButton("Open File");
-        testButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        testButton.addActionListener(e -> {
-            try {
-                createNewTileset();
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            }
-        });
-
         tilesetPanel = new JPanel();
 
         tilesetDropdown = new JComboBox<>(); // TODO: Make it so dropdown is populated when loading from file
+        tilesetDropdown.setBackground(EDITOR.BUTTON_COLOR);
         tilesetDropdown.setAlignmentX(Component.CENTER_ALIGNMENT);
         tilesetDropdown.addActionListener(e -> {
             setTileset(tilesetDropdown.getSelectedIndex());
         });
 
         selectButton = new JButton("Select");
+        selectButton.setBackground(EDITOR.BUTTON_COLOR);
+        selectButton.addActionListener(e -> {
+            selectButton.setBackground(EDITOR.TOGGLE_COLOR);
+            drawButton.setBackground(EDITOR.BUTTON_COLOR);
+            eraseButton.setBackground(EDITOR.BUTTON_COLOR);
+            EDITOR.mode = EditorWindow.EditorMode.SELECT;
+        });
+
         drawButton = new JButton("Draw");
+        drawButton.setBackground(EDITOR.BUTTON_COLOR);
+        drawButton.addActionListener(e -> {
+            selectButton.setBackground(EDITOR.BUTTON_COLOR);
+            drawButton.setBackground(EDITOR.TOGGLE_COLOR);
+            eraseButton.setBackground(EDITOR.BUTTON_COLOR);
+            EDITOR.mode = EditorWindow.EditorMode.DRAW;
+        });
+
         eraseButton = new JButton("Erase");
+        eraseButton.setBackground(EDITOR.BUTTON_COLOR);
+        eraseButton.addActionListener(e -> {
+            selectButton.setBackground(EDITOR.BUTTON_COLOR);
+            drawButton.setBackground(EDITOR.BUTTON_COLOR);
+            eraseButton.setBackground(EDITOR.TOGGLE_COLOR);
+            EDITOR.mode = EditorWindow.EditorMode.ERASE;
+        });
 
         GridBagConstraints gc = new GridBagConstraints();
         gc.gridx = 0;
@@ -78,20 +95,15 @@ public class ToolsPanel extends JPanel {
         gc.gridx = 2;
         add(eraseButton, gc);
 
-        gc.gridx = 1;
-        gc.gridy = 1;
-        add(testButton, gc);
-
         gc.gridx = 0;
-        gc.gridy = 2;
-//        gc.weightx = 1.0;
+        gc.gridy = 1;
         gc.weighty = 1.0;
         gc.gridwidth = 3;
         gc.fill = GridBagConstraints.BOTH;
         add(tilesetPanel, gc);
 
         gc.gridx = 1;
-        gc.gridy = 3;
+        gc.gridy = 2;
         gc.weightx = 1.0;
         gc.weighty = 0.1;
         gc.gridwidth = 1;
