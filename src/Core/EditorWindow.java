@@ -1,16 +1,31 @@
+package Core;
+
+import Components.LevelCanvas;
+import Components.Tile;
+import Components.Tileset;
+import Components.ToolsPanel;
+
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicSplitPaneDivider;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.io.IOException;
 
 /**
  * The frame for the window that comprises the entire level editor application.
  */
 public class EditorWindow extends JFrame {
 
+    public enum EditorMode {
+        SELECT,
+        DRAW,
+        ERASE,
+    }
+
     /** The control panels for the level editor */
-    private JPanel bottomPanel, sidePanel;
+    private JPanel bottomPanel;
+    private ToolsPanel sidePanel;
 
     /** The panel which serves a viewport for the level preview. */
     private LevelCanvas levelGrid;
@@ -20,6 +35,8 @@ public class EditorWindow extends JFrame {
 
     /** Colors of various elements in the editor. */
     private final Color LEVEL_COLOR, PANEL_COLOR, SPLITPANE_COLOR;
+
+    public final Color BUTTON_COLOR, TOGGLE_COLOR;
 
     /** The width/height of the level grid in number of tiles. */
     private final int LEVEL_WIDTH = 30;
@@ -32,7 +49,9 @@ public class EditorWindow extends JFrame {
     private JMenu fileMenu, editMenu, helpMenu;
 
     /** Open/Exit options in the file menu button dropdown. */
-    private JMenuItem openFile, exit;
+    private JMenuItem openFile, importTileset, exit;
+
+    public EditorMode mode;
 
     /**
      * Sets up the main editor window and all components within it.
@@ -41,6 +60,8 @@ public class EditorWindow extends JFrame {
      */
     public EditorWindow(int width, int height) {
         super("Level Editor");
+
+        mode = EditorMode.SELECT;
 
         Dimension resolution = Toolkit.getDefaultToolkit().getScreenSize(); // Get resolution of display
 
@@ -54,6 +75,9 @@ public class EditorWindow extends JFrame {
         PANEL_COLOR = new Color(74, 75, 79);
         SPLITPANE_COLOR = new Color(57, 59, 64);
 
+        BUTTON_COLOR = new Color(231, 234, 239, 255);
+        TOGGLE_COLOR = new Color(116, 125, 141, 255);
+
         // Set up content pane
         Container contentPane = getContentPane();
         contentPane.setPreferredSize(new Dimension(width, height));
@@ -65,12 +89,12 @@ public class EditorWindow extends JFrame {
         bottomPanel.setBackground(PANEL_COLOR);
 
         // Set up side control panel
-        sidePanel = new JPanel();
+        sidePanel = new ToolsPanel(this);
         sidePanel.setPreferredSize(new Dimension(180, height));
         sidePanel.setBackground(PANEL_COLOR);
 
         // Set up level grid
-        levelGrid = new LevelCanvas(LEVEL_WIDTH, LEVEL_HEIGHT);
+        levelGrid = new LevelCanvas(LEVEL_WIDTH, LEVEL_HEIGHT, this);
         levelGrid.setBackground(LEVEL_COLOR);
 
         // Set up split pane between the level preview and bottom control panel
@@ -107,8 +131,17 @@ public class EditorWindow extends JFrame {
 
         // Create and add menu items to the "File" menu
         openFile = new JMenuItem("Open file");
+        importTileset = new JMenuItem("Import tileset");
+        importTileset.addActionListener(e -> {
+            try {
+                sidePanel.createNewTileset();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        });
         exit = new JMenuItem("Exit");
         fileMenu.add(openFile);
+        fileMenu.add(importTileset);
         fileMenu.add(exit);
 
         menuBar.add(fileMenu);
@@ -143,5 +176,12 @@ public class EditorWindow extends JFrame {
                 };
             }
         };
+    }
+
+    public Tile getCurrentTile() {
+        Tileset tileset = sidePanel.getCurrentTileset();
+        if (tileset == null) return null;
+
+        return tileset.getCurrentTile();
     }
 }

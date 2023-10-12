@@ -1,3 +1,8 @@
+package Components;
+
+import Core.EditorWindow;
+import Core.EditorWindow.EditorMode;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -49,13 +54,17 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
      */
     private JButton resetButton;
 
+    private final EditorWindow EDITOR;
+
+    private boolean ctrlSelect;
+
     /**
      * Initializes a new instance of the level editor's viewport.
      *
      * @param width  The number of tiles in the horizontal direction.
      * @param height The number of tiles in the vertical direction.
      */
-    public LevelCanvas(int width, int height) {
+    public LevelCanvas(int width, int height, EditorWindow editor) {
         // Initialize values
         this.width = width;
         this.height = height;
@@ -67,10 +76,15 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         xPosition = 0;
         yPosition = 0;
 
+        ctrlSelect = false;
+
+        EDITOR = editor;
+
         setLayout(new FlowLayout(FlowLayout.LEFT, 1, 1));
 
         // Set up button to reset position and scale of level preview
         resetButton = new JButton("Reset Position");
+        resetButton.setBackground(EDITOR.BUTTON_COLOR);
         resetButton.addActionListener(e -> {
             resetCanvas();
         });
@@ -81,13 +95,6 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         addMouseWheelListener(this);
         addMouseListener(this);
         addMouseMotionListener(this);
-
-        // Set up tile objects
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                tiles[x][y] = new Tile();
-            }
-        }
     }
 
     /**
@@ -115,18 +122,17 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
 
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                if (!tiles[x][y].exists) continue;
+                if (tiles[x][y] == null) continue;
 
                 // Create filled square if it exists
-
                 g2.setColor(Color.DARK_GRAY);
 
                 int newX = (int) (x * scaledSize) + xPos;
                 int newY = (int) (y * scaledSize) + yPos;
+                int scaledSizeInt = (int) Math.ceil(scaledSize);
 
-                Rectangle rec = new Rectangle(newX, newY, (int) (scaledSize), (int) (scaledSize));
-                g2.draw(rec);
-                g2.fill(rec);
+                // Draw current tile
+                tiles[x][y].draw(g2, newX, newY, scaledSizeInt, this);
             }
         }
     }
@@ -151,6 +157,9 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
      * @param yCoord The mouse's y coordinates within the canvas (in pixels).
      */
     private void paintTile(int xCoord, int yCoord) {
+        if (EDITOR.mode == EditorMode.SELECT) return;
+
+        boolean erase = (EDITOR.mode == EditorMode.ERASE);
 
         // Get the x and y coordinates of the tile within the array
         int x = (int) Math.floor((xCoord - xPosition) / (TILE_SIZE * scale));
@@ -158,7 +167,7 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
 
         // If the coordinates are within the bounds of the array
         if ((x >= 0 && x < width) && (y >= 0 && y < height)) {
-            tiles[x][y].exists = true;
+            tiles[x][y] = erase ? null : EDITOR.getCurrentTile();
         }
 
         repaint();
@@ -178,7 +187,7 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         // Reset tiles
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                tiles[x][y].exists = false;
+                tiles[x][y] = null;
             }
         }
 
@@ -202,6 +211,9 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         if (SwingUtilities.isMiddleMouseButton(e) || SwingUtilities.isRightMouseButton(e)) {
             prevPoint = e.getPoint(); // Store the mouse's current position
         } else if (SwingUtilities.isLeftMouseButton(e)) {
+            if (EDITOR.mode == EditorMode.SELECT) {
+
+            }
             paintTile(e.getX(), e.getY());
         }
     }
@@ -249,16 +261,19 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
 
     @Override
     public void keyTyped(KeyEvent e) {
-
     }
 
     @Override
     public void keyPressed(KeyEvent e) {
-
+        if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
+            ctrlSelect = true;
+        }
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
-
+        if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
+            ctrlSelect = false;
+        }
     }
 }
