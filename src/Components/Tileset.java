@@ -1,5 +1,7 @@
 package Components;
 
+import Serial.Tile;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -16,7 +18,7 @@ public class Tileset extends JPanel {
     private final int ROWS;
     private final int COLUMNS;
     private int currentTile;
-    private int tilesetID;
+    private String tilesetID;
 
     /**
      * Instantiates a tileset object containing all tiles of a specified size.
@@ -25,7 +27,7 @@ public class Tileset extends JPanel {
      * @param image The source image of the tileset.
      * @param tilesetID The ID of the tileset.
      */
-    public Tileset(int tileSize, BufferedImage image, int tilesetID) {
+    public Tileset(int tileSize, BufferedImage image, String tilesetID) {
         this.tileSize = tileSize;
         currentTile = 0;
         this.tilesetID = tilesetID;
@@ -60,7 +62,7 @@ public class Tileset extends JPanel {
 
                 if (empty) continue; // If the sub-image was empty, continue to the next one
 
-                tiles[spriteIndex] = new Tile(subImage, spriteIndex, tilesetID);
+                tiles[spriteIndex] = new Tile(subImage, spriteIndex, "tilesetID");
 
                 // Set the position of the tile button in the grid
                 gc.gridx = x;
@@ -116,7 +118,7 @@ public class Tileset extends JPanel {
 
     @Override
     public String toString() {
-        return ("Tileset: " + tilesetID);
+        return (tilesetID);
     }
 
 }

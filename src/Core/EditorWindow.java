@@ -1,9 +1,7 @@
 package Core;
 
-import Components.LevelCanvas;
-import Components.Tile;
-import Components.Tileset;
-import Components.ToolsPanel;
+import Components.*;
+import Serial.Tile;
 
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicSplitPaneDivider;
@@ -28,10 +26,12 @@ public class EditorWindow extends JFrame {
     private ToolsPanel sidePanel;
 
     /** The panel which serves a viewport for the level preview. */
-    private LevelCanvas levelGrid;
+    private LevelCanvas levelCanvas;
+
+    private LevelControls levelControls;
 
     /** The split panes that contain the 3 main panels of the editor. */
-    private JSplitPane splitPane1, splitPane2;
+    private JSplitPane splitPane1, splitPane2, splitPane3;
 
     /** Colors of various elements in the editor. */
     private final Color LEVEL_COLOR, PANEL_COLOR, SPLITPANE_COLOR;
@@ -49,7 +49,7 @@ public class EditorWindow extends JFrame {
     private JMenu fileMenu, editMenu, helpMenu;
 
     /** Open/Exit options in the file menu button dropdown. */
-    private JMenuItem openFile, importTileset, exit;
+    private JMenuItem openFile, importTileset, exportLevel, exit;
 
     public EditorMode mode;
 
@@ -94,26 +94,37 @@ public class EditorWindow extends JFrame {
         sidePanel.setBackground(PANEL_COLOR);
 
         // Set up level grid
-        levelGrid = new LevelCanvas(LEVEL_WIDTH, LEVEL_HEIGHT, this);
-        levelGrid.setBackground(LEVEL_COLOR);
+        levelCanvas = new LevelCanvas(LEVEL_WIDTH, LEVEL_HEIGHT, this);
+        levelCanvas.setBackground(LEVEL_COLOR);
+
+        levelControls = new LevelControls(this, levelCanvas);
+        levelControls.setBackground(PANEL_COLOR);
 
         // Set up split pane between the level preview and bottom control panel
-        splitPane1 = new JSplitPane(JSplitPane.VERTICAL_SPLIT, levelGrid, bottomPanel);
+        splitPane1 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, levelControls, levelCanvas);
         splitPane1.setUI(customDivider(SPLITPANE_COLOR));
-        splitPane1.setResizeWeight(0.75);
+        splitPane1.setResizeWeight(0);
         splitPane1.setDividerSize(4);
         splitPane1.setBorder(null);
         ((BasicSplitPaneDivider) splitPane1.getComponent(2)).setBorder(null);
 
-        // Set up split pane between previous split pane (level view and bottom panel) and the side control panel
-        splitPane2 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, splitPane1, sidePanel);
+        // Set up split pane between the level preview and bottom control panel
+        splitPane2 = new JSplitPane(JSplitPane.VERTICAL_SPLIT, splitPane1, bottomPanel);
         splitPane2.setUI(customDivider(SPLITPANE_COLOR));
         splitPane2.setResizeWeight(0.75);
         splitPane2.setDividerSize(4);
         splitPane2.setBorder(null);
         ((BasicSplitPaneDivider) splitPane2.getComponent(2)).setBorder(null);
 
-        contentPane.add(splitPane2); // Add all control panels to the content pane
+        // Set up split pane between previous split pane (level view and bottom panel) and the side control panel
+        splitPane3 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, splitPane2, sidePanel);
+        splitPane3.setUI(customDivider(SPLITPANE_COLOR));
+        splitPane3.setResizeWeight(0.75);
+        splitPane3.setDividerSize(4);
+        splitPane3.setBorder(null);
+        ((BasicSplitPaneDivider) splitPane3.getComponent(2)).setBorder(null);
+
+        contentPane.add(splitPane3); // Add all control panels to the content pane
 
         // Menu bar stuff
         // TODO: Add event handling to menu bar
@@ -121,7 +132,7 @@ public class EditorWindow extends JFrame {
 
         // Create the menu buttons
         fileMenu = new JMenu("File");
-        editMenu = new JMenu("Edit");
+        editMenu = new JMenu("Edit"); // TODO: Add ability to rename current tileset and chance level size
         helpMenu = new JMenu("Help");
 
         // Assigns a key to each menu button
@@ -139,9 +150,19 @@ public class EditorWindow extends JFrame {
                 throw new RuntimeException(ex);
             }
         });
+
+        exportLevel = new JMenuItem("Export Level");
+        exportLevel.addActionListener(e -> {
+            try {
+                levelCanvas.exportLevelFile();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        });
         exit = new JMenuItem("Exit");
         fileMenu.add(openFile);
         fileMenu.add(importTileset);
+        fileMenu.add(exportLevel);
         fileMenu.add(exit);
 
         menuBar.add(fileMenu);
