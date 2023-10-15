@@ -2,10 +2,18 @@ package Components;
 
 import Core.EditorWindow;
 import Core.EditorWindow.EditorMode;
+import Serial.LevelData;
+import Serial.Tile;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.nio.file.Files;
+import java.util.ArrayList;
 
 /**
  * The canvas for the level editor. Allows the user to zoom and pan around the level's grid and paint tiles.
@@ -15,7 +23,8 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
     /**
      * The level's grid of tiles.
      */
-    private Tile[][] tiles;
+    private ArrayList<Tile[][]> layers;
+    public int currentLayer;
 
     /**
      * The width/height of the level's grid.
@@ -49,14 +58,12 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
      */
     private int xPosition, yPosition;
 
-    /**
-     * The button used to reset the viewport to its original position and scale and empties all tiles.
-     */
-    private JButton resetButton;
-
     private final EditorWindow EDITOR;
 
     private boolean ctrlSelect;
+    private int selectX, selectY;
+
+    private JFileChooser fileChooser;
 
     /**
      * Initializes a new instance of the level editor's viewport.
@@ -68,7 +75,9 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         // Initialize values
         this.width = width;
         this.height = height;
-        tiles = new Tile[width][height];
+        layers = new ArrayList<>();
+        currentLayer = -1;
+
         prevPoint = new Point(0, 0);
         scale = 1.0;
         xOffset = 0;
@@ -77,19 +86,17 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         yPosition = 0;
 
         ctrlSelect = false;
+        selectX = -1;
+        selectY = -1;
 
         EDITOR = editor;
 
-        setLayout(new FlowLayout(FlowLayout.LEFT, 1, 1));
-
-        // Set up button to reset position and scale of level preview
-        resetButton = new JButton("Reset Position");
-        resetButton.setBackground(EDITOR.BUTTON_COLOR);
-        resetButton.addActionListener(e -> {
-            resetCanvas();
-        });
-
-        add(resetButton); // Add the button to the panel
+        fileChooser = new JFileChooser();
+        fileChooser.setAcceptAllFileFilterUsed(false);
+        FileNameExtensionFilter filter = new FileNameExtensionFilter(
+                "Level File (*.lvl, *.level)", "lvl", "level"
+        );
+        fileChooser.setFileFilter(filter);
 
         // Add the necessary mouse input listeners for moving the viewport
         addMouseWheelListener(this);
@@ -103,10 +110,13 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
      * @param g2 The Graphics2D object to handle the graphics resources.
      */
     public void drawGrid(Graphics2D g2) {
+        if (currentLayer < 0) return;
+
         double scaledSize = TILE_SIZE * scale;
 
         int yPos = yPosition + yOffset;
         int xPos = xPosition + xOffset;
+        int scaledSizeInt = (int) Math.ceil(scaledSize);
 
         // Draw vertical grid lines
         for (int x = 0; x <= width; x++) {
@@ -122,18 +132,28 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
 
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                if (tiles[x][y] == null) continue;
+                if (layers.get(currentLayer)[x][y] == null) continue;
 
                 // Create filled square if it exists
                 g2.setColor(Color.DARK_GRAY);
 
                 int newX = (int) (x * scaledSize) + xPos;
                 int newY = (int) (y * scaledSize) + yPos;
-                int scaledSizeInt = (int) Math.ceil(scaledSize);
 
                 // Draw current tile
-                tiles[x][y].draw(g2, newX, newY, scaledSizeInt, this);
+                layers.get(currentLayer)[x][y].draw(g2, newX, newY, scaledSizeInt, this);
             }
+        }
+
+        if ((selectX != -1) && (selectY != -1)) {
+            g2.setColor(Color.RED);
+
+            // Draw selection icon over tile
+            g2.drawRect(
+                    (int) (selectX * scaledSize) + xPos,
+                    (int) (selectY * scaledSize) + yPos,
+                    scaledSizeInt, scaledSizeInt
+            );
         }
     }
 
@@ -145,38 +165,35 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         Graphics2D g2 = (Graphics2D) g;
         drawGrid(g2);
 
-        resetButton.paint(g); // Draw reset position button
-
-        g2.dispose(); // Dispose of graphics resources (this has to be last)
+        g.dispose(); // Dispose of graphics resources (this has to be last)
     }
 
     /**
      * Paints the tile at the given mouse coordinates.
      *
-     * @param xCoord The mouse's x coordinates within the canvas (in pixels).
-     * @param yCoord The mouse's y coordinates within the canvas (in pixels).
+     * @param mousePos The mouse's coordinates within the canvas (in pixels).
      */
-    private void paintTile(int xCoord, int yCoord) {
-        if (EDITOR.mode == EditorMode.SELECT) return;
+    private void paintTile(Point mousePos) {
+        if ((EDITOR.mode == EditorMode.SELECT) || (currentLayer < 0)) return;
 
         boolean erase = (EDITOR.mode == EditorMode.ERASE);
 
-        // Get the x and y coordinates of the tile within the array
-        int x = (int) Math.floor((xCoord - xPosition) / (TILE_SIZE * scale));
-        int y = (int) Math.floor((yCoord - yPosition) / (TILE_SIZE * scale));
+        Point gridPos = screenToGrid(mousePos);
+        int x = gridPos.x;
+        int y = gridPos.y;
 
         // If the coordinates are within the bounds of the array
         if ((x >= 0 && x < width) && (y >= 0 && y < height)) {
-            tiles[x][y] = erase ? null : EDITOR.getCurrentTile();
+            layers.get(currentLayer)[x][y] = erase ? null : EDITOR.getCurrentTile();
         }
 
         repaint();
     }
 
     /**
-     * Resets the position, scale, and all tiles currently within the level grid.
+     * Resets the position and scale of the canvas grid.
      */
-    public void resetCanvas() {
+    public void resetCanvasPosition() {
         // Reset "camera" position values
         xPosition = 0;
         yPosition = 0;
@@ -184,14 +201,83 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         yOffset = 0;
         scale = 1;
 
-        // Reset tiles
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                tiles[x][y] = null;
-            }
+//        if (currentLayer >= 0) {
+//            // Reset tiles
+//            for (int x = 0; x < width; x++) {
+//                for (int y = 0; y < height; y++) {
+//                    layers.get(currentLayer)[x][y] = null;
+//                }
+//            }
+//        }
+
+        repaint();
+    }
+
+    public void addLayer() {
+        layers.add(new Tile[width][height]);
+        currentLayer = Math.max(0, currentLayer + 1);
+        repaint();
+    }
+
+    public void removeCurrentLayer() {
+        if (currentLayer < 0) return;
+
+        layers.remove(currentLayer);
+        currentLayer = Math.min(layers.size() - 1, currentLayer);
+        repaint();
+    }
+
+    private void selectTile(Point point) {
+        Point pos = screenToGrid(point);
+
+        System.out.println("position: " + pos);
+
+        if (pos.x >= 0 && pos.x < width && pos.y >= 0 && pos.y < height) {
+            selectX = pos.x;
+            selectY = pos.y;
+        } else {
+            selectX = -1;
+            selectY = -1;
         }
 
         repaint();
+    }
+
+    /**
+     * Converts the given mouse coordinates to grid coordinates. The coordinates returned may exceed level bounds.
+     *
+     * @param mousePos The mouse's coordinates within the canvas (in pixels).
+     * @return The grid coordinates that correspond with the mouse position.
+     */
+    private Point screenToGrid(Point mousePos) {
+        // Get the x and y coordinates of the tile within the array
+        int x = (int) Math.floor((mousePos.x - xPosition) / (TILE_SIZE * scale));
+        int y = (int) Math.floor((mousePos.y - yPosition) / (TILE_SIZE * scale));
+
+        return new Point(x, y);
+    }
+
+    public void exportLevelFile() throws IOException {
+        int val = fileChooser.showSaveDialog(null);
+
+        if (val != JFileChooser.APPROVE_OPTION) return;
+
+        String levelName = JOptionPane.showInputDialog(
+                null,
+                "Enter a name for the layer:", "Layer Name",
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (levelName == null || levelName.trim().isEmpty()) return;
+
+        LevelData level = new LevelData(layers, levelName, width, height);
+
+        File fileToSave = fileChooser.getSelectedFile();
+        ObjectOutputStream outputStream = new ObjectOutputStream(Files.newOutputStream(fileToSave.toPath()));
+
+        outputStream.writeObject(level);
+
+        outputStream.close();
     }
 
     @Override
@@ -208,13 +294,15 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
 
     @Override
     public void mousePressed(MouseEvent e) {
+        System.out.println("pressed");
         if (SwingUtilities.isMiddleMouseButton(e) || SwingUtilities.isRightMouseButton(e)) {
             prevPoint = e.getPoint(); // Store the mouse's current position
         } else if (SwingUtilities.isLeftMouseButton(e)) {
             if (EDITOR.mode == EditorMode.SELECT) {
-
+                selectTile(e.getPoint());
+            } else {
+               paintTile(e.getPoint());
             }
-            paintTile(e.getX(), e.getY());
         }
     }
 
@@ -251,7 +339,7 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
 
             repaint(); // Repaint the viewport
         } else if (SwingUtilities.isLeftMouseButton(e)) {
-            paintTile(e.getX(), e.getY());
+            paintTile(e.getPoint());
         }
     }
 

@@ -124,12 +124,16 @@ public class ToolsPanel extends JPanel {
         File file = fileChooser.getSelectedFile();
         BufferedImage image = ImageIO.read(file);
 
-        int tileSize = getValidTileSize(image); // Get valid user input for the size of each tile.
-
-        if (tileSize == -1) return; // If the user quits the prompt, end the import process.
+//        int tileSize = getValidTileSize(image); // Get valid user input for the size of each tile.
+//
+//        if (tileSize == -1) return; // If the user quits the prompt, end the import process.
 
         // Add the new tileset to the arraylist of tilesets
-        addTileset(new Tileset(tileSize, image, tilesets.size()));
+//        addTileset(new Tileset(tileSize, image, "tilesets.size()"));
+        Tileset tileset = generateValidTileset(image);
+        if (tileset == null) return;
+
+        addTileset(tileset);
         currentTileset = tilesets.size() - 1;
     }
 
@@ -139,7 +143,7 @@ public class ToolsPanel extends JPanel {
      * @param image The BufferedImage object read from the user-specified file.
      * @return The size of each tile from the tileset. Is -1 if the user cancels.
      */
-    private int getValidTileSize(BufferedImage image) {
+    private Tileset generateValidTileset(BufferedImage image) {
 
         // Create panel which will contain content for the JOptionPane
         JPanel importPanel = new JPanel();
@@ -154,7 +158,8 @@ public class ToolsPanel extends JPanel {
         JTextField sizeField = new JTextField(4);
         sizeField.setHorizontalAlignment(JTextField.CENTER);
         JLabel nameInstruction = new JLabel("Enter a name for the tileset:");
-        JTextField nameField = new JTextField();
+        nameInstruction.setToolTipText("This will be used to identify the tileset from the asset manager in the game.");
+        JTextField nameField = new JTextField(10);
 
         Component[] components = {
                 imagePreview, imageSize,
@@ -192,7 +197,7 @@ public class ToolsPanel extends JPanel {
             );
 
             // If the user exits the window, quit the import process.
-            if (decision != JOptionPane.OK_OPTION) return -1;
+            if (decision != JOptionPane.OK_OPTION) return null;
 
             // Try to parse the tile size from user input.
             val = -1;
@@ -200,8 +205,10 @@ public class ToolsPanel extends JPanel {
                 val = Integer.parseInt(sizeField.getText());
             } catch (NumberFormatException ignored) {}
 
+            boolean isMultiple = (((image.getWidth() % val) != 0) && ((image.getHeight() % val) != 0));
+
             // If the input is invalid, loop back to the input prompt
-            if ((val == -1) || (((image.getWidth() % val) != 0) && ((image.getHeight() % val) != 0))) {
+            if ((val == -1) || isMultiple || nameField.getText().trim().isEmpty()) {
                 val = -1;
                 sizeField.setText("");
                 continue;
@@ -212,7 +219,7 @@ public class ToolsPanel extends JPanel {
             break;
         }
 
-        return tileSize;
+        return new Tileset(tileSize, image, nameField.getText().trim());
     }
 
     public Tileset getCurrentTileset() {
