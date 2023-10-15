@@ -1,5 +1,4 @@
-import javax.swing.*;
-import java.awt.*;
+package Core;
 
 public class Main {
     public static void main(String[] args) {
@@ -7,6 +6,6 @@ public class Main {
         int width = 800;
         int height = 600;
 
-        EditorWindow levelEditor = new EditorWindow(width, height);
+        EditorWindow levelEditor = new EditorWindow(width, height); // Start the application (basically)
     }
 }
