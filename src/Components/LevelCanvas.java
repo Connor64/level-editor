@@ -387,40 +387,88 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
             newHeight = 0;
         }
 
+        // If the size wasn't changed
+        if ((newWidth == width) && (newHeight == height)) return;
+
         for (int i = 0; i < layers.size(); i++) {
-            Tile[][] currentLayer = layers.get(i);
             Tile[][] newLayer = new Tile[newWidth][newHeight];
+            Tile[][] oldLayer = layers.get(i);
 
             int xBound = Math.min(width, newWidth);
             int yBound = Math.min(height, newHeight);
+            int xMaxBound = Math.max(width, newWidth);
+            int yMaxBound = Math.max(height, newHeight);
 
-            // TODO: Implement the other cases
+            int xOffset = (xMaxBound - xBound) / 2;
+            int yOffset = (yMaxBound - yBound) / 2;
+
+            int newXOffset = (newWidth > width) ? xOffset : 0;
+            int newYOffset = (newHeight > height) ? yOffset : 0;
+            int oldXOffset = (newWidth < width) ? xOffset : 0;
+            int oldYOffset = (newHeight < height) ? yOffset : 0;
+
             switch (resizeOption) {
                 case 0:
                     for (int x = 0; x < xBound; x++) {
                         for (int y = 0; y < yBound; y++) {
-                            newLayer[newWidth - 1 - x][newHeight - 1 - y] = currentLayer[width - 1 - x][height - 1 - y];
+                            newLayer[newWidth - 1 - x][newHeight - 1 - y] = oldLayer[width - 1 - x][height - 1 - y];
                         }
                     }
                     break;
                 case 1:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[x + newXOffset][newHeight - 1 - y] = oldLayer[x + oldXOffset][height - 1 - y];
+                        }
+                    }
                     break;
                 case 2:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[x][newHeight - 1 - y] = oldLayer[x][height - 1 - y];
+                        }
+                    }
                     break;
                 case 3:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[newWidth - 1 - x][y + newYOffset] = oldLayer[width - 1 - x][y + oldYOffset];
+                        }
+                    }
                     break;
                 case 4:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[x + newXOffset][y + newYOffset] = oldLayer[x + oldXOffset][y + oldYOffset];
+                        }
+                    }
+
                     break;
                 case 5:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[x][y + newYOffset] = oldLayer[x][y + oldYOffset];
+                        }
+                    }
                     break;
                 case 6:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[newWidth - 1 - x][y] = oldLayer[width - 1 - x][y];
+                        }
+                    }
                     break;
                 case 7:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[x + newXOffset][y] = oldLayer[x + oldXOffset][y];
+                        }
+                    }
                     break;
                 case 8:
                     for (int x = 0; x < xBound; x++) {
                         for (int y = 0; y < yBound; y++) {
-                            newLayer[x][y] = currentLayer[x][y];
+                            newLayer[x][y] = oldLayer[x][y];
                         }
                     }
                     break;
