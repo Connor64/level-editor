@@ -225,7 +225,6 @@ public class ToolsPanel extends JPanel {
     public Tileset getCurrentTileset() {
         if (currentTileset < 0) return null;
 
-        System.out.println("not null");
         return tilesets.get(currentTileset);
     }
 

@@ -51,6 +51,8 @@ public class EditorWindow extends JFrame {
     /** Open/Exit options in the file menu button dropdown. */
     private JMenuItem openFile, importTileset, exportLevel, exit;
 
+    private JMenuItem resizeLevel;
+
     public EditorMode mode;
 
     /**
@@ -142,6 +144,7 @@ public class EditorWindow extends JFrame {
 
         // Create and add menu items to the "File" menu
         openFile = new JMenuItem("Open file");
+
         importTileset = new JMenuItem("Import tileset");
         importTileset.addActionListener(e -> {
             try {
@@ -159,11 +162,20 @@ public class EditorWindow extends JFrame {
                 throw new RuntimeException(ex);
             }
         });
+
         exit = new JMenuItem("Exit");
+
         fileMenu.add(openFile);
         fileMenu.add(importTileset);
         fileMenu.add(exportLevel);
         fileMenu.add(exit);
+
+        resizeLevel = new JMenuItem("Resize Level");
+        resizeLevel.addActionListener(e -> {
+            levelCanvas.resizeCanvas();
+        });
+
+        editMenu.add(resizeLevel);
 
         menuBar.add(fileMenu);
         menuBar.add(editMenu);
