@@ -78,6 +78,4 @@ public class LevelControls extends JPanel {
         gc.gridwidth = 2;
         add(layersDropdown, gc);
     }
-
-
 }

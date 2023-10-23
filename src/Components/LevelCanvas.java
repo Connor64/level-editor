@@ -4,11 +4,14 @@ import Core.EditorWindow;
 import Core.EditorWindow.EditorMode;
 import Serial.LevelData;
 import Serial.Tile;
+import com.sun.deploy.panel.JavaPanel;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -65,6 +68,9 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
 
     private JFileChooser fileChooser;
 
+    private JPanel resizeDirectionPanel;
+    private int resizeOption = 4;
+
     /**
      * Initializes a new instance of the level editor's viewport.
      *
@@ -102,6 +108,40 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         addMouseWheelListener(this);
         addMouseListener(this);
         addMouseMotionListener(this);
+
+        resizeDirectionPanel = new JPanel();
+        resizeDirectionPanel.setLayout(new GridBagLayout());
+        GridBagConstraints gc = new GridBagConstraints();
+
+        // Add resize direction buttons to the panel
+        try {
+            int index = 0;
+            for (int y = 0; y < 3; y++) {
+                gc.gridy = y;
+                for (int x = 0; x < 3; x++) {
+                    int finalIndex = index;
+                    BufferedImage icon = ImageIO.read(new File("icons/resize_icon_" + index + ".png"));
+
+                    JButton button = new JButton();
+                    button.setBackground((index == resizeOption) ? EDITOR.TOGGLE_COLOR : EDITOR.BUTTON_COLOR);
+                    button.setIcon(new ImageIcon(icon.getScaledInstance(32, 32, Image.SCALE_FAST)));
+                    button.setPreferredSize(new Dimension(32, 32));
+                    button.addActionListener(e -> {
+                        for (int i = 0; i < 9; i++) {
+                            resizeDirectionPanel.getComponent(i).setBackground(EDITOR.BUTTON_COLOR);
+                        }
+                        button.setBackground(EDITOR.TOGGLE_COLOR);
+                        resizeOption = finalIndex;
+                    });
+
+                    gc.gridx = x;
+                    resizeDirectionPanel.add(button, gc);
+                    index++;
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -201,15 +241,6 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         yOffset = 0;
         scale = 1;
 
-//        if (currentLayer >= 0) {
-//            // Reset tiles
-//            for (int x = 0; x < width; x++) {
-//                for (int y = 0; y < height; y++) {
-//                    layers.get(currentLayer)[x][y] = null;
-//                }
-//            }
-//        }
-
         repaint();
     }
 
@@ -264,7 +295,7 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
 
         String levelName = JOptionPane.showInputDialog(
                 null,
-                "Enter a name for the layer:", "Layer Name",
+                "Enter a name for the level:", "Layer Name",
                 JOptionPane.PLAIN_MESSAGE
         );
 
@@ -278,6 +309,182 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         outputStream.writeObject(level);
 
         outputStream.close();
+    }
+
+    public void resizeCanvas() {
+        // Create panel containing controls
+        JPanel sizePanel = new JPanel();
+        sizePanel.setLayout(new GridBagLayout());
+        GridBagConstraints gc = new GridBagConstraints();
+
+        // Create width label and field
+        JLabel widthLabel = new JLabel("Width:");
+        JTextField widthField = new JTextField(4);
+        widthField.setText(String.valueOf(width));
+
+        // Create height label and field
+        JLabel heightLabel = new JLabel("Height:");
+        JTextField heightField = new JTextField(4);
+        heightField.setText(String.valueOf(height));
+
+        // Add labels and fields to panel
+        gc.gridx = 0;
+        gc.gridy = 0;
+        gc.insets = new Insets(2, 2, 2, 2);
+
+        sizePanel.add(widthLabel, gc);
+        gc.gridx = 1;
+        sizePanel.add(widthField, gc);
+
+        gc.gridy = 1;
+        sizePanel.add(heightField, gc);
+        gc.gridx = 0;
+        sizePanel.add(heightLabel, gc);
+
+        gc.gridwidth = 2;
+        gc.gridx = 0;
+        gc.gridy = 2;
+        sizePanel.add(resizeDirectionPanel, gc);
+
+        int newWidth = 0;
+        int newHeight = 0;
+
+        // Loop over prompt until user cancels or gives valid input
+        while (true) {
+            // Prompt the user for a tile size
+            int decision = JOptionPane.showConfirmDialog(
+                    null,
+                    sizePanel,
+                    "Choose a new level size",
+                    JOptionPane.OK_CANCEL_OPTION,
+                    JOptionPane.PLAIN_MESSAGE
+            );
+
+            if (decision != JOptionPane.OK_OPTION) return;
+
+            // Parse input
+            try {
+                newWidth = Integer.parseInt(widthField.getText());
+                newHeight = Integer.parseInt(heightField.getText());
+            } catch (NumberFormatException ignored) {
+            }
+
+            // If input is valid, exit loop
+            if ((newWidth > 0) && (newHeight > 0)) {
+                break;
+            }
+
+            // Prompt user for valid input
+            JOptionPane.showMessageDialog(null,
+                    "Input must be an integer greater than 0!",
+                    "Invalid Input!", JOptionPane.ERROR_MESSAGE
+            );
+
+            // Reset fields
+            widthField.setText(String.valueOf(width));
+            heightField.setText(String.valueOf(height));
+            newWidth = 0;
+            newHeight = 0;
+        }
+
+        // If the size wasn't changed
+        if ((newWidth == width) && (newHeight == height)) return;
+
+        for (int i = 0; i < layers.size(); i++) {
+            Tile[][] newLayer = new Tile[newWidth][newHeight];
+            Tile[][] oldLayer = layers.get(i);
+
+            int xBound = Math.min(width, newWidth);
+            int yBound = Math.min(height, newHeight);
+            int xMaxBound = Math.max(width, newWidth);
+            int yMaxBound = Math.max(height, newHeight);
+
+            int xOffset = (xMaxBound - xBound) / 2;
+            int yOffset = (yMaxBound - yBound) / 2;
+
+            int newXOffset = (newWidth > width) ? xOffset : 0;
+            int newYOffset = (newHeight > height) ? yOffset : 0;
+            int oldXOffset = (newWidth < width) ? xOffset : 0;
+            int oldYOffset = (newHeight < height) ? yOffset : 0;
+
+            switch (resizeOption) {
+                case 0:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[newWidth - 1 - x][newHeight - 1 - y] = oldLayer[width - 1 - x][height - 1 - y];
+                        }
+                    }
+                    break;
+                case 1:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[x + newXOffset][newHeight - 1 - y] = oldLayer[x + oldXOffset][height - 1 - y];
+                        }
+                    }
+                    break;
+                case 2:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[x][newHeight - 1 - y] = oldLayer[x][height - 1 - y];
+                        }
+                    }
+                    break;
+                case 3:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[newWidth - 1 - x][y + newYOffset] = oldLayer[width - 1 - x][y + oldYOffset];
+                        }
+                    }
+                    break;
+                case 4:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[x + newXOffset][y + newYOffset] = oldLayer[x + oldXOffset][y + oldYOffset];
+                        }
+                    }
+
+                    break;
+                case 5:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[x][y + newYOffset] = oldLayer[x][y + oldYOffset];
+                        }
+                    }
+                    break;
+                case 6:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[newWidth - 1 - x][y] = oldLayer[width - 1 - x][y];
+                        }
+                    }
+                    break;
+                case 7:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[x + newXOffset][y] = oldLayer[x + oldXOffset][y];
+                        }
+                    }
+                    break;
+                case 8:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[x][y] = oldLayer[x][y];
+                        }
+                    }
+                    break;
+                default:
+                    System.err.println("Error: invalid resize option");
+                    resizeOption = 4;
+                    break;
+            }
+
+            layers.set(i, newLayer);
+        }
+
+        width = newWidth;
+        height = newHeight;
+
+        repaint();
     }
 
     @Override
@@ -301,7 +508,7 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
             if (EDITOR.mode == EditorMode.SELECT) {
                 selectTile(e.getPoint());
             } else {
-               paintTile(e.getPoint());
+                paintTile(e.getPoint());
             }
         }
     }
