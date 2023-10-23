@@ -6,10 +6,12 @@ import Serial.LevelData;
 import Serial.Tile;
 import com.sun.deploy.panel.JavaPanel;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -66,6 +68,9 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
 
     private JFileChooser fileChooser;
 
+    private JPanel resizeDirectionPanel;
+    private int resizeOption = 4;
+
     /**
      * Initializes a new instance of the level editor's viewport.
      *
@@ -103,6 +108,40 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         addMouseWheelListener(this);
         addMouseListener(this);
         addMouseMotionListener(this);
+
+        resizeDirectionPanel = new JPanel();
+        resizeDirectionPanel.setLayout(new GridBagLayout());
+        GridBagConstraints gc = new GridBagConstraints();
+
+        // Add resize direction buttons to the panel
+        try {
+            int index = 0;
+            for (int y = 0; y < 3; y++) {
+                gc.gridy = y;
+                for (int x = 0; x < 3; x++) {
+                    int finalIndex = index;
+                    BufferedImage icon = ImageIO.read(new File("icons/resize_icon_" + index + ".png"));
+
+                    JButton button = new JButton();
+                    button.setBackground((index == resizeOption) ? EDITOR.TOGGLE_COLOR : EDITOR.BUTTON_COLOR);
+                    button.setIcon(new ImageIcon(icon.getScaledInstance(32, 32, Image.SCALE_FAST)));
+                    button.setPreferredSize(new Dimension(32, 32));
+                    button.addActionListener(e -> {
+                        for (int i = 0; i < 9; i++) {
+                            resizeDirectionPanel.getComponent(i).setBackground(EDITOR.BUTTON_COLOR);
+                        }
+                        button.setBackground(EDITOR.TOGGLE_COLOR);
+                        resizeOption = finalIndex;
+                    });
+
+                    gc.gridx = x;
+                    resizeDirectionPanel.add(button, gc);
+                    index++;
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -202,15 +241,6 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         yOffset = 0;
         scale = 1;
 
-//        if (currentLayer >= 0) {
-//            // Reset tiles
-//            for (int x = 0; x < width; x++) {
-//                for (int y = 0; y < height; y++) {
-//                    layers.get(currentLayer)[x][y] = null;
-//                }
-//            }
-//        }
-
         repaint();
     }
 
@@ -281,7 +311,7 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         outputStream.close();
     }
 
-    public void editCanvasSize() {
+    public void resizeCanvas() {
         // Create panel containing controls
         JPanel sizePanel = new JPanel();
         sizePanel.setLayout(new GridBagLayout());
@@ -311,6 +341,11 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         gc.gridx = 0;
         sizePanel.add(heightLabel, gc);
 
+        gc.gridwidth = 2;
+        gc.gridx = 0;
+        gc.gridy = 2;
+        sizePanel.add(resizeDirectionPanel, gc);
+
         int newWidth = 0;
         int newHeight = 0;
 
@@ -331,7 +366,8 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
             try {
                 newWidth = Integer.parseInt(widthField.getText());
                 newHeight = Integer.parseInt(heightField.getText());
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ignored) {
+            }
 
             // If input is valid, exit loop
             if ((newWidth > 0) && (newHeight > 0)) {
@@ -358,10 +394,40 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
             int xBound = Math.min(width, newWidth);
             int yBound = Math.min(height, newHeight);
 
-            for (int x = 0; x < xBound; x++) {
-                for (int y = 0; y < yBound; y++) {
-                    newLayer[x][y] = currentLayer[x][y];
-                }
+            // TODO: Implement the other cases
+            switch (resizeOption) {
+                case 0:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[newWidth - 1 - x][newHeight - 1 - y] = currentLayer[width - 1 - x][height - 1 - y];
+                        }
+                    }
+                    break;
+                case 1:
+                    break;
+                case 2:
+                    break;
+                case 3:
+                    break;
+                case 4:
+                    break;
+                case 5:
+                    break;
+                case 6:
+                    break;
+                case 7:
+                    break;
+                case 8:
+                    for (int x = 0; x < xBound; x++) {
+                        for (int y = 0; y < yBound; y++) {
+                            newLayer[x][y] = currentLayer[x][y];
+                        }
+                    }
+                    break;
+                default:
+                    System.err.println("Error: invalid resize option");
+                    resizeOption = 4;
+                    break;
             }
 
             layers.set(i, newLayer);
@@ -394,7 +460,7 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
             if (EDITOR.mode == EditorMode.SELECT) {
                 selectTile(e.getPoint());
             } else {
-               paintTile(e.getPoint());
+                paintTile(e.getPoint());
             }
         }
     }

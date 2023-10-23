@@ -51,7 +51,7 @@ public class EditorWindow extends JFrame {
     /** Open/Exit options in the file menu button dropdown. */
     private JMenuItem openFile, importTileset, exportLevel, exit;
 
-    private JMenuItem levelSize;
+    private JMenuItem resizeLevel;
 
     public EditorMode mode;
 
@@ -170,12 +170,12 @@ public class EditorWindow extends JFrame {
         fileMenu.add(exportLevel);
         fileMenu.add(exit);
 
-        levelSize = new JMenuItem("Change Level Size");
-        levelSize.addActionListener(e -> {
-            levelCanvas.editCanvasSize();
+        resizeLevel = new JMenuItem("Resize Level");
+        resizeLevel.addActionListener(e -> {
+            levelCanvas.resizeCanvas();
         });
 
-        editMenu.add(levelSize);
+        editMenu.add(resizeLevel);
 
         menuBar.add(fileMenu);
         menuBar.add(editMenu);
