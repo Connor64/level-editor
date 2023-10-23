@@ -4,6 +4,7 @@ import Core.EditorWindow;
 import Core.EditorWindow.EditorMode;
 import Serial.LevelData;
 import Serial.Tile;
+import com.sun.deploy.panel.JavaPanel;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -264,7 +265,7 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
 
         String levelName = JOptionPane.showInputDialog(
                 null,
-                "Enter a name for the layer:", "Layer Name",
+                "Enter a name for the level:", "Layer Name",
                 JOptionPane.PLAIN_MESSAGE
         );
 
@@ -278,6 +279,98 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         outputStream.writeObject(level);
 
         outputStream.close();
+    }
+
+    public void editCanvasSize() {
+        // Create panel containing controls
+        JPanel sizePanel = new JPanel();
+        sizePanel.setLayout(new GridBagLayout());
+        GridBagConstraints gc = new GridBagConstraints();
+
+        // Create width label and field
+        JLabel widthLabel = new JLabel("Width:");
+        JTextField widthField = new JTextField(4);
+        widthField.setText(String.valueOf(width));
+
+        // Create height label and field
+        JLabel heightLabel = new JLabel("Height:");
+        JTextField heightField = new JTextField(4);
+        heightField.setText(String.valueOf(height));
+
+        // Add labels and fields to panel
+        gc.gridx = 0;
+        gc.gridy = 0;
+        gc.insets = new Insets(2, 2, 2, 2);
+
+        sizePanel.add(widthLabel, gc);
+        gc.gridx = 1;
+        sizePanel.add(widthField, gc);
+
+        gc.gridy = 1;
+        sizePanel.add(heightField, gc);
+        gc.gridx = 0;
+        sizePanel.add(heightLabel, gc);
+
+        int newWidth = 0;
+        int newHeight = 0;
+
+        // Loop over prompt until user cancels or gives valid input
+        while (true) {
+            // Prompt the user for a tile size
+            int decision = JOptionPane.showConfirmDialog(
+                    null,
+                    sizePanel,
+                    "Choose a new level size",
+                    JOptionPane.OK_CANCEL_OPTION,
+                    JOptionPane.PLAIN_MESSAGE
+            );
+
+            if (decision != JOptionPane.OK_OPTION) return;
+
+            // Parse input
+            try {
+                newWidth = Integer.parseInt(widthField.getText());
+                newHeight = Integer.parseInt(heightField.getText());
+            } catch (NumberFormatException ignored) {}
+
+            // If input is valid, exit loop
+            if ((newWidth > 0) && (newHeight > 0)) {
+                break;
+            }
+
+            // Prompt user for valid input
+            JOptionPane.showMessageDialog(null,
+                    "Input must be an integer greater than 0!",
+                    "Invalid Input!", JOptionPane.ERROR_MESSAGE
+            );
+
+            // Reset fields
+            widthField.setText(String.valueOf(width));
+            heightField.setText(String.valueOf(height));
+            newWidth = 0;
+            newHeight = 0;
+        }
+
+        for (int i = 0; i < layers.size(); i++) {
+            Tile[][] currentLayer = layers.get(i);
+            Tile[][] newLayer = new Tile[newWidth][newHeight];
+
+            int xBound = Math.min(width, newWidth);
+            int yBound = Math.min(height, newHeight);
+
+            for (int x = 0; x < xBound; x++) {
+                for (int y = 0; y < yBound; y++) {
+                    newLayer[x][y] = currentLayer[x][y];
+                }
+            }
+
+            layers.set(i, newLayer);
+        }
+
+        width = newWidth;
+        height = newHeight;
+
+        repaint();
     }
 
     @Override
