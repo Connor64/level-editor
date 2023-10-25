@@ -4,7 +4,6 @@ import Core.EditorWindow;
 import Core.EditorWindow.EditorMode;
 import Serial.LevelData;
 import Serial.Tile;
-import com.sun.deploy.panel.JavaPanel;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -49,7 +48,12 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
     /**
      * The previous location that the mouse was last clicked on the viewport. Used to track panning.
      */
-    private Point prevPoint;
+    private Point prevPressPoint;
+
+    /**
+     * The previous position that was painted on the canvas. Used to ensure tiles aren't skipped when painting.
+     */
+    private Point prevPaintPoint;
 
     /**
      * The x/y offset of the viewport during panning.
@@ -84,7 +88,8 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         layers = new ArrayList<>();
         currentLayer = -1;
 
-        prevPoint = new Point(0, 0);
+        prevPressPoint = new Point(0, 0);
+        prevPaintPoint = null;
         scale = 1.0;
         xOffset = 0;
         yOffset = 0;
@@ -216,15 +221,57 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
     private void paintTile(Point mousePos) {
         if ((EDITOR.mode == EditorMode.SELECT) || (currentLayer < 0)) return;
 
-        boolean erase = (EDITOR.mode == EditorMode.ERASE);
+        Tile tileToPaint = (EDITOR.mode == EditorMode.ERASE) ? null : EDITOR.getCurrentTile();
 
         Point gridPos = screenToGrid(mousePos);
-        int x = gridPos.x;
-        int y = gridPos.y;
+        Point prevPos = null;
+        if (prevPaintPoint != null) prevPos = screenToGrid(prevPaintPoint);
 
-        // If the coordinates are within the bounds of the array
-        if ((x >= 0 && x < width) && (y >= 0 && y < height)) {
-            layers.get(currentLayer)[x][y] = erase ? null : EDITOR.getCurrentTile();
+        int x1 = gridPos.x;
+        int y1 = gridPos.y;
+
+        if ((x1 < 0 || x1 >= width) || (y1 < 0 || y1 >= height)) return;
+
+        Tile[][] layer = layers.get(currentLayer);
+
+        if ((prevPos == null) || gridPos.equals(prevPos)) {
+            // If the coordinates are within the bounds of the array
+            if (layer[x1][y1] == tileToPaint) return; // Don't bother repainting if the tile doesn't change
+
+            layer[x1][y1] = tileToPaint;
+        } else {
+            // Algorithm below is a modified Bresenham line-drawing algorithm as specified here:
+            // http://eugen.dedu.free.fr/projects/bresenham/
+
+            int x0 = prevPos.x;
+            int y0 = prevPos.y;
+
+            int x = x0;
+            int y = y0;
+            int incrementX = (x1 > x0) ? 1 : -1;
+            int incrementY = (y1 > y0) ? 1 : -1;
+
+            int dx = Math.abs(x1 - x0);
+            int dy = Math.abs(y1 - y0);
+            int n = 1 + dx + dy;
+            int error = dx - dy;
+
+            dx *= 2;
+            dy *= 2;
+
+            for (; n > 0; --n) {
+                if ((x >= 0 && x < width) && (y >= 0 && y < height)) {
+                    layer[x][y] = tileToPaint;
+
+                    if (error > 0) {
+                        x += incrementX;
+                        error -= dy;
+                    } else {
+                        y += incrementY;
+                        error += dx;
+                    }
+                }
+            }
         }
 
         repaint();
@@ -288,16 +335,21 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         return new Point(x, y);
     }
 
+    /**
+     * Prompts the user to name the level and choose where to save the file.
+     *
+     * @throws IOException If the file is unable to be written.
+     */
     public void exportLevelFile() throws IOException {
+        String levelName = JOptionPane.showInputDialog(
+                null,
+                "Enter a name for the level (this is not the file name!):", "Layer Name",
+                JOptionPane.PLAIN_MESSAGE
+        );
+
         int val = fileChooser.showSaveDialog(null);
 
         if (val != JFileChooser.APPROVE_OPTION) return;
-
-        String levelName = JOptionPane.showInputDialog(
-                null,
-                "Enter a name for the level:", "Layer Name",
-                JOptionPane.PLAIN_MESSAGE
-        );
 
         if (levelName == null || levelName.trim().isEmpty()) return;
 
@@ -311,6 +363,9 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         outputStream.close();
     }
 
+    /**
+     * Prompts to the user to resize the level canvas and choose which direction it grows/shrinks
+     */
     public void resizeCanvas() {
         // Create panel containing controls
         JPanel sizePanel = new JPanel();
@@ -407,72 +462,72 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
             int oldXOffset = (newWidth < width) ? xOffset : 0;
             int oldYOffset = (newHeight < height) ? yOffset : 0;
 
+            // Resize level based on option selected
             switch (resizeOption) {
-                case 0:
+                case 0: // Top left
                     for (int x = 0; x < xBound; x++) {
                         for (int y = 0; y < yBound; y++) {
                             newLayer[newWidth - 1 - x][newHeight - 1 - y] = oldLayer[width - 1 - x][height - 1 - y];
                         }
                     }
                     break;
-                case 1:
+                case 1: // Up
                     for (int x = 0; x < xBound; x++) {
                         for (int y = 0; y < yBound; y++) {
                             newLayer[x + newXOffset][newHeight - 1 - y] = oldLayer[x + oldXOffset][height - 1 - y];
                         }
                     }
                     break;
-                case 2:
+                case 2: // Top right
                     for (int x = 0; x < xBound; x++) {
                         for (int y = 0; y < yBound; y++) {
                             newLayer[x][newHeight - 1 - y] = oldLayer[x][height - 1 - y];
                         }
                     }
                     break;
-                case 3:
+                case 3: // Left
                     for (int x = 0; x < xBound; x++) {
                         for (int y = 0; y < yBound; y++) {
                             newLayer[newWidth - 1 - x][y + newYOffset] = oldLayer[width - 1 - x][y + oldYOffset];
                         }
                     }
                     break;
-                case 4:
+                case 4: // Center
                     for (int x = 0; x < xBound; x++) {
                         for (int y = 0; y < yBound; y++) {
                             newLayer[x + newXOffset][y + newYOffset] = oldLayer[x + oldXOffset][y + oldYOffset];
                         }
                     }
-
                     break;
-                case 5:
+                case 5: // Right
                     for (int x = 0; x < xBound; x++) {
                         for (int y = 0; y < yBound; y++) {
                             newLayer[x][y + newYOffset] = oldLayer[x][y + oldYOffset];
                         }
                     }
                     break;
-                case 6:
+                case 6: // Bottom left
                     for (int x = 0; x < xBound; x++) {
                         for (int y = 0; y < yBound; y++) {
                             newLayer[newWidth - 1 - x][y] = oldLayer[width - 1 - x][y];
                         }
                     }
                     break;
-                case 7:
+                case 7: // Down
                     for (int x = 0; x < xBound; x++) {
                         for (int y = 0; y < yBound; y++) {
                             newLayer[x + newXOffset][y] = oldLayer[x + oldXOffset][y];
                         }
                     }
                     break;
-                case 8:
+                case 8: // Bottom right
                     for (int x = 0; x < xBound; x++) {
                         for (int y = 0; y < yBound; y++) {
                             newLayer[x][y] = oldLayer[x][y];
                         }
                     }
                     break;
-                default:
+                default: // This shouldn't ever be possible
                     System.err.println("Error: invalid resize option");
                     resizeOption = 4;
                     break;
@@ -501,14 +556,14 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
 
     @Override
     public void mousePressed(MouseEvent e) {
-        System.out.println("pressed");
         if (SwingUtilities.isMiddleMouseButton(e) || SwingUtilities.isRightMouseButton(e)) {
-            prevPoint = e.getPoint(); // Store the mouse's current position
+            prevPressPoint = e.getPoint(); // Store the mouse's current position
         } else if (SwingUtilities.isLeftMouseButton(e)) {
             if (EDITOR.mode == EditorMode.SELECT) {
                 selectTile(e.getPoint());
             } else {
                 paintTile(e.getPoint());
+                prevPaintPoint = e.getPoint();
             }
         }
     }
@@ -525,6 +580,8 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
             yOffset = 0;
 
             repaint(); // Repaint the viewport
+        } else if (SwingUtilities.isLeftMouseButton(e)) {
+            prevPaintPoint = null;
         }
     }
 
@@ -541,12 +598,13 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         if (SwingUtilities.isMiddleMouseButton(e) || SwingUtilities.isRightMouseButton(e)) {
             // Calculate the difference between the mouse's current position
             // and where the middle mouse button was originally pressed.
-            xOffset = e.getPoint().x - prevPoint.x;
-            yOffset = e.getPoint().y - prevPoint.y;
+            xOffset = e.getPoint().x - prevPressPoint.x;
+            yOffset = e.getPoint().y - prevPressPoint.y;
 
             repaint(); // Repaint the viewport
         } else if (SwingUtilities.isLeftMouseButton(e)) {
             paintTile(e.getPoint());
+            prevPaintPoint = e.getPoint();
         }
     }
 
