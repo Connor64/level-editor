@@ -1,6 +1,9 @@
-package Components;
+package UIComponents;
 
+import Content.Tileset;
+import Core.EditorConstants;
 import Core.EditorWindow;
+import Core.EditorConstants.EditorMode;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -51,37 +54,37 @@ public class ToolsPanel extends JPanel {
         tilesetPanel = new JPanel();
 
         tilesetDropdown = new JComboBox<>(); // TODO: Make it so dropdown is populated when loading from file
-        tilesetDropdown.setBackground(EDITOR.BUTTON_COLOR);
+        tilesetDropdown.setBackground(EditorConstants.BUTTON_COLOR);
         tilesetDropdown.setAlignmentX(Component.CENTER_ALIGNMENT);
         tilesetDropdown.addActionListener(e -> {
             setTileset(tilesetDropdown.getSelectedIndex());
         });
 
         selectButton = new JButton("Select");
-        selectButton.setBackground(EDITOR.BUTTON_COLOR);
+        selectButton.setBackground(EditorConstants.BUTTON_COLOR);
         selectButton.addActionListener(e -> {
-            selectButton.setBackground(EDITOR.TOGGLE_COLOR);
-            drawButton.setBackground(EDITOR.BUTTON_COLOR);
-            eraseButton.setBackground(EDITOR.BUTTON_COLOR);
-            EDITOR.mode = EditorWindow.EditorMode.SELECT;
+            selectButton.setBackground(EditorConstants.TOGGLE_COLOR);
+            drawButton.setBackground(EditorConstants.BUTTON_COLOR);
+            eraseButton.setBackground(EditorConstants.BUTTON_COLOR);
+            EDITOR.mode = EditorMode.SELECT;
         });
 
         drawButton = new JButton("Draw");
-        drawButton.setBackground(EDITOR.BUTTON_COLOR);
+        drawButton.setBackground(EditorConstants.BUTTON_COLOR);
         drawButton.addActionListener(e -> {
-            selectButton.setBackground(EDITOR.BUTTON_COLOR);
-            drawButton.setBackground(EDITOR.TOGGLE_COLOR);
-            eraseButton.setBackground(EDITOR.BUTTON_COLOR);
-            EDITOR.mode = EditorWindow.EditorMode.DRAW;
+            selectButton.setBackground(EditorConstants.BUTTON_COLOR);
+            drawButton.setBackground(EditorConstants.TOGGLE_COLOR);
+            eraseButton.setBackground(EditorConstants.BUTTON_COLOR);
+            EDITOR.mode = EditorMode.DRAW;
         });
 
         eraseButton = new JButton("Erase");
-        eraseButton.setBackground(EDITOR.BUTTON_COLOR);
+        eraseButton.setBackground(EditorConstants.BUTTON_COLOR);
         eraseButton.addActionListener(e -> {
-            selectButton.setBackground(EDITOR.BUTTON_COLOR);
-            drawButton.setBackground(EDITOR.BUTTON_COLOR);
-            eraseButton.setBackground(EDITOR.TOGGLE_COLOR);
-            EDITOR.mode = EditorWindow.EditorMode.ERASE;
+            selectButton.setBackground(EditorConstants.BUTTON_COLOR);
+            drawButton.setBackground(EditorConstants.BUTTON_COLOR);
+            eraseButton.setBackground(EditorConstants.TOGGLE_COLOR);
+            EDITOR.mode = EditorMode.ERASE;
         });
 
         GridBagConstraints gc = new GridBagConstraints();

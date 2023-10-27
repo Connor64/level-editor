@@ -1,7 +1,9 @@
 package Core;
 
-import Components.*;
+import UIComponents.*;
+import Content.Tileset;
 import Serial.Tile;
+import Core.EditorConstants.EditorMode;
 
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicSplitPaneDivider;
@@ -15,12 +17,6 @@ import java.io.IOException;
  */
 public class EditorWindow extends JFrame {
 
-    public enum EditorMode {
-        SELECT,
-        DRAW,
-        ERASE,
-    }
-
     /** The control panels for the level editor */
     private JPanel bottomPanel;
     private ToolsPanel sidePanel;
@@ -28,15 +24,10 @@ public class EditorWindow extends JFrame {
     /** The panel which serves a viewport for the level preview. */
     private LevelCanvas levelCanvas;
 
-    private LevelControls levelControls;
+    private LayerPanel layerPanel;
 
     /** The split panes that contain the 3 main panels of the editor. */
     private JSplitPane splitPane1, splitPane2, splitPane3;
-
-    /** Colors of various elements in the editor. */
-    private final Color LEVEL_COLOR, PANEL_COLOR, SPLITPANE_COLOR;
-
-    public final Color BUTTON_COLOR, TOGGLE_COLOR;
 
     /** The width/height of the level grid in number of tiles. */
     private final int LEVEL_WIDTH = 30;
@@ -72,14 +63,6 @@ public class EditorWindow extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(width, height));
 
-        // Initialize the values of the colors used throughout the application
-        LEVEL_COLOR = new Color(160, 160, 168);
-        PANEL_COLOR = new Color(74, 75, 79);
-        SPLITPANE_COLOR = new Color(57, 59, 64);
-
-        BUTTON_COLOR = new Color(231, 234, 239, 255);
-        TOGGLE_COLOR = new Color(116, 125, 141, 255);
-
         // Set up content pane
         Container contentPane = getContentPane();
         contentPane.setPreferredSize(new Dimension(width, height));
@@ -88,23 +71,23 @@ public class EditorWindow extends JFrame {
         // Set up bottom panel (will hold custom game objects)
         bottomPanel = new JPanel();
         bottomPanel.setPreferredSize(new Dimension(width, 90));
-        bottomPanel.setBackground(PANEL_COLOR);
+        bottomPanel.setBackground(EditorConstants.PANEL_COLOR);
 
         // Set up side control panel
         sidePanel = new ToolsPanel(this);
         sidePanel.setPreferredSize(new Dimension(180, height));
-        sidePanel.setBackground(PANEL_COLOR);
+        sidePanel.setBackground(EditorConstants.PANEL_COLOR);
 
         // Set up level grid
         levelCanvas = new LevelCanvas(LEVEL_WIDTH, LEVEL_HEIGHT, this);
-        levelCanvas.setBackground(LEVEL_COLOR);
+        levelCanvas.setBackground(EditorConstants.LEVEL_COLOR);
 
-        levelControls = new LevelControls(this, levelCanvas);
-        levelControls.setBackground(PANEL_COLOR);
+        layerPanel = new LayerPanel(this, levelCanvas);
+        layerPanel.setBackground(EditorConstants.PANEL_COLOR);
 
         // Set up split pane between the level preview and bottom control panel
-        splitPane1 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, levelControls, levelCanvas);
-        splitPane1.setUI(customDivider(SPLITPANE_COLOR));
+        splitPane1 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, layerPanel, levelCanvas);
+        splitPane1.setUI(customDivider(EditorConstants.SPLITPANE_COLOR));
         splitPane1.setResizeWeight(0);
         splitPane1.setDividerSize(4);
         splitPane1.setBorder(null);
@@ -112,7 +95,7 @@ public class EditorWindow extends JFrame {
 
         // Set up split pane between the level preview and bottom control panel
         splitPane2 = new JSplitPane(JSplitPane.VERTICAL_SPLIT, splitPane1, bottomPanel);
-        splitPane2.setUI(customDivider(SPLITPANE_COLOR));
+        splitPane2.setUI(customDivider(EditorConstants.SPLITPANE_COLOR));
         splitPane2.setResizeWeight(0.75);
         splitPane2.setDividerSize(4);
         splitPane2.setBorder(null);
@@ -120,7 +103,7 @@ public class EditorWindow extends JFrame {
 
         // Set up split pane between previous split pane (level view and bottom panel) and the side control panel
         splitPane3 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, splitPane2, sidePanel);
-        splitPane3.setUI(customDivider(SPLITPANE_COLOR));
+        splitPane3.setUI(customDivider(EditorConstants.SPLITPANE_COLOR));
         splitPane3.setResizeWeight(0.75);
         splitPane3.setDividerSize(4);
         splitPane3.setBorder(null);
@@ -172,7 +155,7 @@ public class EditorWindow extends JFrame {
 
         resizeLevel = new JMenuItem("Resize Level");
         resizeLevel.addActionListener(e -> {
-            levelCanvas.resizeCanvas();
+            LevelManager.INSTANCE.resizeCurrentLevel();
         });
 
         editMenu.add(resizeLevel);
