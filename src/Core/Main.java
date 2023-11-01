@@ -6,6 +6,6 @@ public class Main {
         int width = 800;
         int height = 600;
 
-        EditorWindow levelEditor = new EditorWindow(width, height); // Start the application (basically)
+        EditorWindow.INSTANCE.initialize(width, height);
     }
 }
