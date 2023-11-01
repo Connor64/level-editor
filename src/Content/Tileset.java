@@ -1,9 +1,11 @@
 package Content;
 
-import Serial.Tile;
+import Core.EditorConstants;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
@@ -14,6 +16,7 @@ public class Tileset extends JPanel {
     /** The array of all tiles from the tileset. */
     private Tile[] tiles;
 
+    private JButton[] buttons;
     private int tileSize;
     private final int ROWS;
     private final int COLUMNS;
@@ -41,6 +44,7 @@ public class Tileset extends JPanel {
         ROWS = image.getHeight() / tileSize;
         COLUMNS = image.getWidth() / tileSize;
         tiles = new Tile[ROWS * COLUMNS];
+        buttons = new JButton[ROWS * COLUMNS];
 
         // Iterate over all tiles/sub-images
         int spriteIndex = 0;
@@ -71,14 +75,44 @@ public class Tileset extends JPanel {
                 // Create button for the current tile
                 JButton tileButton = new JButton();
                 tileButton.setContentAreaFilled(false);
+                tileButton.setBorderPainted(false);
+                tileButton.setBorder(EditorConstants.HOVER_BORDER);
                 tileButton.setIcon(new ImageIcon(tiles[spriteIndex].getSprite().getScaledInstance(
                         tileSize * 2, tileSize * 2, Image.SCALE_FAST
                         ))
                 );
 
+                // Add hover effects
+                tileButton.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseEntered(MouseEvent e) {
+                        super.mouseEntered(e);
+                        if (tileButton.getBorder() != EditorConstants.SELECT_BORDER) {
+                            tileButton.setBorderPainted(true);
+                        }
+                    }
+
+                    @Override
+                    public void mouseExited(MouseEvent e) {
+                        super.mouseExited(e);
+
+                        if (tileButton.getBorder() != EditorConstants.SELECT_BORDER) {
+                            tileButton.setBorderPainted(false);
+                        }
+                    }
+                });
+
                 int finalI = spriteIndex;
                 tileButton.addActionListener(e -> {
                     currentTile = finalI;
+
+                    for (Component component : buttonContainer.getComponents()) {
+                        ((JButton) component).setBorderPainted(false);
+                        ((JButton) component).setBorder(EditorConstants.HOVER_BORDER);
+                    }
+
+                    tileButton.setBorder(EditorConstants.SELECT_BORDER);
+                    tileButton.setBorderPainted(true);
                 });
 
                 // Set the button size to be double the size of the sprite

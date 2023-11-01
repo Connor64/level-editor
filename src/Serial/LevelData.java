@@ -1,6 +1,7 @@
 package Serial;
 
 import Content.Level;
+import Content.Tile;
 
 import java.io.Serializable;
 

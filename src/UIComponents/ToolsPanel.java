@@ -19,7 +19,7 @@ import java.util.ArrayList;
  */
 public class ToolsPanel extends JPanel {
     private JButton selectButton, drawButton, eraseButton;
-    private JPanel tilesetPanel;
+    private JPanel tilesetContainer;
     private JComboBox<Tileset> tilesetDropdown;
 
     /** The file chooser used to select images to generate tilesets from*/
@@ -36,8 +36,8 @@ public class ToolsPanel extends JPanel {
     /**
      * Instantiates a tool panel object and sets up all of its components.
      */
-    public ToolsPanel(EditorWindow editor) {
-        EDITOR = editor;
+    public ToolsPanel() {
+        EDITOR = EditorWindow.INSTANCE;
 
         setLayout(new GridBagLayout());
         tilesets = new ArrayList<>();
@@ -51,7 +51,7 @@ public class ToolsPanel extends JPanel {
         );
         fileChooser.setFileFilter(filter);
 
-        tilesetPanel = new JPanel();
+        tilesetContainer = new JPanel();
 
         tilesetDropdown = new JComboBox<>(); // TODO: Make it so dropdown is populated when loading from file
         tilesetDropdown.setBackground(EditorConstants.BUTTON_COLOR);
@@ -60,7 +60,16 @@ public class ToolsPanel extends JPanel {
             setTileset(tilesetDropdown.getSelectedIndex());
         });
 
-        selectButton = new JButton("Select");
+        BufferedImage selectIcon, paintIcon, eraseIcon;
+        try {
+            selectIcon = ImageIO.read(new File("icons/select_icon.png"));
+            paintIcon = ImageIO.read(new File("icons/paint_icon.png"));
+            eraseIcon = ImageIO.read(new File("icons/eraser_icon.png"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        selectButton = new JButton();
         selectButton.setBackground(EditorConstants.BUTTON_COLOR);
         selectButton.addActionListener(e -> {
             selectButton.setBackground(EditorConstants.TOGGLE_COLOR);
@@ -68,8 +77,10 @@ public class ToolsPanel extends JPanel {
             eraseButton.setBackground(EditorConstants.BUTTON_COLOR);
             EDITOR.mode = EditorMode.SELECT;
         });
+        selectButton.setIcon(new ImageIcon(selectIcon.getScaledInstance(32, 32, Image.SCALE_FAST)));
+        selectButton.setPreferredSize(new Dimension(40, 40));
 
-        drawButton = new JButton("Draw");
+        drawButton = new JButton();
         drawButton.setBackground(EditorConstants.BUTTON_COLOR);
         drawButton.addActionListener(e -> {
             selectButton.setBackground(EditorConstants.BUTTON_COLOR);
@@ -77,8 +88,10 @@ public class ToolsPanel extends JPanel {
             eraseButton.setBackground(EditorConstants.BUTTON_COLOR);
             EDITOR.mode = EditorMode.DRAW;
         });
+        drawButton.setIcon(new ImageIcon(paintIcon.getScaledInstance(32, 32, Image.SCALE_FAST)));
+        drawButton.setPreferredSize(new Dimension(40, 40));
 
-        eraseButton = new JButton("Erase");
+        eraseButton = new JButton();
         eraseButton.setBackground(EditorConstants.BUTTON_COLOR);
         eraseButton.addActionListener(e -> {
             selectButton.setBackground(EditorConstants.BUTTON_COLOR);
@@ -86,32 +99,43 @@ public class ToolsPanel extends JPanel {
             eraseButton.setBackground(EditorConstants.TOGGLE_COLOR);
             EDITOR.mode = EditorMode.ERASE;
         });
+        eraseButton.setIcon(new ImageIcon(eraseIcon.getScaledInstance(32, 32, Image.SCALE_FAST)));
+        eraseButton.setPreferredSize(new Dimension(40, 40));
 
         GridBagConstraints gc = new GridBagConstraints();
-        gc.gridx = 0;
+        gc.gridx = 1;
         gc.gridy = 0;
         add(selectButton, gc);
 
-        gc.gridx = 1;
+        gc.gridx = 2;
         add(drawButton, gc);
 
-        gc.gridx = 2;
+        gc.gridx = 3;
         add(eraseButton, gc);
 
         gc.gridx = 0;
         gc.gridy = 1;
         gc.weighty = 1.0;
-        gc.gridwidth = 3;
+        gc.gridwidth = 5;
         gc.fill = GridBagConstraints.BOTH;
-        add(tilesetPanel, gc);
+        add(tilesetContainer, gc);
 
-        gc.gridx = 1;
+        gc.gridx = 2;
         gc.gridy = 2;
         gc.weightx = 1.0;
         gc.weighty = 0.1;
         gc.gridwidth = 1;
         gc.fill = GridBagConstraints.NONE;
         add(tilesetDropdown, gc);
+
+        gc.gridx = 0;
+        gc.gridy = 0;
+        gc.fill = GridBagConstraints.HORIZONTAL;
+        add(Box.createHorizontalGlue(), gc);
+
+        gc.gridx = 4;
+        gc.fill = GridBagConstraints.HORIZONTAL;
+        add(Box.createHorizontalGlue(), gc);
     }
 
     /**
@@ -233,8 +257,8 @@ public class ToolsPanel extends JPanel {
 
     private void setTileset(int index) {
         currentTileset = Math.max(Math.min(index, tilesets.size()), 0);
-        tilesetPanel.removeAll();
-        tilesetPanel.add(tilesets.get(index));
+        tilesetContainer.removeAll();
+        tilesetContainer.add(tilesets.get(index));
         revalidate();
         repaint();
     }

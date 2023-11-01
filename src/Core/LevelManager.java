@@ -1,28 +1,35 @@
 package Core;
 
 import Content.Level;
+import Serial.LevelData;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 
+/**
+ * Manages all levels currently open within the application.
+ */
 public class LevelManager {
-    public static final LevelManager INSTANCE = new LevelManager();
-
     private final int DEFAULT_WIDTH = 30, DEFAULT_HEIGHT = 30;
 
     private ArrayList<Level> levels;
     private Level currentLevel = null;
-    private JPanel resizeDirectionPanel;
-    private int resizeOption = 4;
+    private final JPanel resizeDirectionPanel;
+    private int resizeDirection = 4;
 
-    private LevelManager() {
+    private JFileChooser fileChooser;
+
+    public LevelManager() {
         levels = new ArrayList<>();
-        levels.add(new Level(30, 30));
+        levels.add(new Level(DEFAULT_WIDTH, DEFAULT_HEIGHT));
         currentLevel = levels.get(0);
 
         resizeDirectionPanel = new JPanel();
@@ -39,7 +46,7 @@ public class LevelManager {
                     BufferedImage icon = ImageIO.read(new File("icons/resize_icon_" + index + ".png"));
 
                     JButton button = new JButton();
-                    button.setBackground((index == resizeOption) ? EditorConstants.TOGGLE_COLOR : EditorConstants.BUTTON_COLOR);
+                    button.setBackground((index == resizeDirection) ? EditorConstants.TOGGLE_COLOR : EditorConstants.BUTTON_COLOR);
                     button.setIcon(new ImageIcon(icon.getScaledInstance(32, 32, Image.SCALE_FAST)));
                     button.setPreferredSize(new Dimension(32, 32));
                     button.addActionListener(e -> {
@@ -47,7 +54,7 @@ public class LevelManager {
                             resizeDirectionPanel.getComponent(i).setBackground(EditorConstants.BUTTON_COLOR);
                         }
                         button.setBackground(EditorConstants.TOGGLE_COLOR);
-                        resizeOption = finalIndex;
+                        resizeDirection = finalIndex;
                     });
 
                     gc.gridx = x;
@@ -58,6 +65,14 @@ public class LevelManager {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+        // File chooser for the tileset
+        fileChooser = new JFileChooser();
+        fileChooser.setAcceptAllFileFilterUsed(false);
+        FileNameExtensionFilter filter = new FileNameExtensionFilter(
+                "Level File (*.lvl, *.level)", "lvl", "level"
+        );
+        fileChooser.setFileFilter(filter);
     }
 
     public Level getCurrentLevel() {
@@ -153,6 +168,36 @@ public class LevelManager {
         if ((newWidth == currentLevel.getWidth()) &&
                 (newHeight == currentLevel.getHeight())) return;
 
-        currentLevel.resize(newWidth, newHeight, resizeOption);
+        currentLevel.resize(newWidth, newHeight, resizeDirection, true);
+    }
+
+    /**
+     * Exports the current level as a .lvl file.
+     *
+     * @throws IOException Thrown if the filepath is invalid or file is unable to be written.
+     */
+    public void exportCurrentLevel() throws IOException {
+        // Prompt for choosing the level's name
+        String levelName = JOptionPane.showInputDialog(
+                null,
+                "Enter a name for the level (this is not the file name!):", "Layer Name",
+                JOptionPane.PLAIN_MESSAGE
+        );
+        if (levelName == null || levelName.trim().isEmpty()) return;
+
+        // Prompt the user to choose where to save the file
+        int val = fileChooser.showSaveDialog(null);
+
+        if (val != JFileChooser.APPROVE_OPTION) return;
+
+        // Create output stream to the chosen file destination
+        File fileToSave = fileChooser.getSelectedFile();
+        ObjectOutputStream outputStream = new ObjectOutputStream(Files.newOutputStream(fileToSave.toPath()));
+
+        // Create and export the LevelData object
+        LevelData levelData = new LevelData(currentLevel, levelName);
+        outputStream.writeObject(levelData);
+
+        outputStream.close();
     }
 }

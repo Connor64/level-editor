@@ -1,8 +1,11 @@
 package Content;
 
-import Serial.Tile;
+import java.io.Serializable;
 
-public class Layer {
+/**
+ * Contains all tiles within a single layer of the level.
+ */
+public class Layer implements Serializable {
     private Tile[][] tiles;
     private String name;
 
@@ -23,7 +26,7 @@ public class Layer {
         this.name = name;
     }
 
-    public void resize(int newWidth, int newHeight, int resizeOption) {
+    public void resize(int newWidth, int newHeight, int resizeDirection) {
         int oldWidth = tiles.length;
         int oldHeight = tiles[0].length;
 
@@ -43,7 +46,7 @@ public class Layer {
         int oldYOffset = (newHeight < oldHeight) ? yOffset : 0;
 
         // Resize level based on option selected
-        switch (resizeOption) {
+        switch (resizeDirection) {
             case 0: // Top left
                 for (int x = 0; x < xBound; x++) {
                     for (int y = 0; y < yBound; y++) {

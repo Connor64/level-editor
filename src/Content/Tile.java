@@ -1,4 +1,4 @@
-package Serial;
+package Content;
 
 import javax.swing.*;
 import java.awt.*;

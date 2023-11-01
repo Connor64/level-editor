@@ -2,7 +2,7 @@ package Core;
 
 import UIComponents.*;
 import Content.Tileset;
-import Serial.Tile;
+import Content.Tile;
 import Core.EditorConstants.EditorMode;
 
 import javax.swing.*;
@@ -13,25 +13,23 @@ import java.awt.event.KeyEvent;
 import java.io.IOException;
 
 /**
- * The frame for the window that comprises the entire level editor application.
+ * The frame for the window that comprises the entire level editor application. Uses singleton design pattern.
  */
 public class EditorWindow extends JFrame {
+
+    public static final EditorWindow INSTANCE = new EditorWindow();
 
     /** The control panels for the level editor */
     private JPanel bottomPanel;
     private ToolsPanel sidePanel;
+    private LevelManager levelManager;
+    private LayerControlsPanel layerControlsPanel;
 
-    /** The panel which serves a viewport for the level preview. */
+    /** The panel which serves as a viewport for the level preview. */
     private LevelCanvas levelCanvas;
-
-    private LayerPanel layerPanel;
 
     /** The split panes that contain the 3 main panels of the editor. */
     private JSplitPane splitPane1, splitPane2, splitPane3;
-
-    /** The width/height of the level grid in number of tiles. */
-    private final int LEVEL_WIDTH = 30;
-    private final int LEVEL_HEIGHT = 30;
 
     /** The menu bar of the application. It holds the "File", "Edit", and "Help" buttons. */
     private JMenuBar menuBar;
@@ -42,19 +40,28 @@ public class EditorWindow extends JFrame {
     /** Open/Exit options in the file menu button dropdown. */
     private JMenuItem openFile, importTileset, exportLevel, exit;
 
+    /** Options in the editor menu button dropdown. */
     private JMenuItem resizeLevel;
 
     public EditorMode mode;
 
     /**
-     * Sets up the main editor window and all components within it.
+     * Creates the JFrame of the application.
+     */
+    private EditorWindow() {
+        super("Level Editor");
+    }
+
+    /**
+     * Initializes the main editor window and all components within it.
+     *
      * @param width The starting and minimum width of the window.
      * @param height The starting and minimum height of the window.
      */
-    public EditorWindow(int width, int height) {
-        super("Level Editor");
-
+    public void initialize(int width, int height) {
         mode = EditorMode.SELECT;
+
+        levelManager = new LevelManager();
 
         Dimension resolution = Toolkit.getDefaultToolkit().getScreenSize(); // Get resolution of display
 
@@ -74,19 +81,19 @@ public class EditorWindow extends JFrame {
         bottomPanel.setBackground(EditorConstants.PANEL_COLOR);
 
         // Set up side control panel
-        sidePanel = new ToolsPanel(this);
+        sidePanel = new ToolsPanel();
         sidePanel.setPreferredSize(new Dimension(180, height));
         sidePanel.setBackground(EditorConstants.PANEL_COLOR);
 
         // Set up level grid
-        levelCanvas = new LevelCanvas(LEVEL_WIDTH, LEVEL_HEIGHT, this);
+        levelCanvas = new LevelCanvas();
         levelCanvas.setBackground(EditorConstants.LEVEL_COLOR);
 
-        layerPanel = new LayerPanel(this, levelCanvas);
-        layerPanel.setBackground(EditorConstants.PANEL_COLOR);
+        layerControlsPanel = new LayerControlsPanel();
+        layerControlsPanel.setBackground(EditorConstants.PANEL_COLOR);
 
         // Set up split pane between the level preview and bottom control panel
-        splitPane1 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, layerPanel, levelCanvas);
+        splitPane1 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, layerControlsPanel, levelCanvas);
         splitPane1.setUI(customDivider(EditorConstants.SPLITPANE_COLOR));
         splitPane1.setResizeWeight(0);
         splitPane1.setDividerSize(4);
@@ -140,7 +147,7 @@ public class EditorWindow extends JFrame {
         exportLevel = new JMenuItem("Export Level");
         exportLevel.addActionListener(e -> {
             try {
-                levelCanvas.exportLevelFile();
+                levelManager.exportCurrentLevel();
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
@@ -155,7 +162,7 @@ public class EditorWindow extends JFrame {
 
         resizeLevel = new JMenuItem("Resize Level");
         resizeLevel.addActionListener(e -> {
-            LevelManager.INSTANCE.resizeCurrentLevel();
+            levelManager.resizeCurrentLevel();
         });
 
         editMenu.add(resizeLevel);
@@ -194,10 +201,28 @@ public class EditorWindow extends JFrame {
         };
     }
 
+    public void refreshComponents() {
+        levelCanvas.repaint();
+        layerControlsPanel.repaint();
+        layerControlsPanel.getLayerContainer().refreshLayers();
+    }
+
     public Tile getCurrentTile() {
         Tileset tileset = sidePanel.getCurrentTileset();
         if (tileset == null) return null;
 
         return tileset.getCurrentTile();
+    }
+
+    public LevelCanvas getCanvas() {
+        return levelCanvas;
+    }
+
+    public LayerControlsPanel getLayerControls() {
+        return layerControlsPanel;
+    }
+
+    public LevelManager getLevelManager() {
+        return levelManager;
     }
 }

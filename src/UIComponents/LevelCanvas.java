@@ -3,21 +3,11 @@ package UIComponents;
 import Core.EditorWindow;
 import Core.EditorConstants.EditorMode;
 import Core.LevelManager;
-import History.TileAction;
-import History.TileHistory;
-import Serial.LevelData;
-import Serial.Tile;
+import Content.Tile;
 
 import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.File;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Stack;
 
 /**
  * The canvas for the level editor. Allows the user to zoom and pan around the level's grid and paint tiles.
@@ -57,27 +47,20 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
     private int xPosition, yPosition;
 
     private final EditorWindow EDITOR;
+    private final LevelManager LEVEL_MANAGER;
 
     private boolean ctrlSelect;
     private int selectX, selectY;
 
     private JFileChooser fileChooser;
 
-    private Stack<TileHistory> actionHistory;
-    private ArrayList<TileAction> currentTileAction;
-    private int currentActionIndex = -1;
-
-    private LevelManager levelManager;
-
     /**
      * Initializes a new instance of the level editor's viewport.
-     *
-     * @param width  The number of tiles in the horizontal direction.
-     * @param height The number of tiles in the vertical direction.
      */
-    public LevelCanvas(int width, int height, EditorWindow editor) {
+    public LevelCanvas() {
         // Initialize values
-        levelManager = LevelManager.INSTANCE;
+        EDITOR = EditorWindow.INSTANCE;
+        LEVEL_MANAGER = EDITOR.getLevelManager();
 
         prevPressPoint = new Point(0, 0);
         prevPaintPoint = null;
@@ -91,18 +74,6 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         selectX = -1;
         selectY = -1;
 
-        EDITOR = editor;
-
-        actionHistory = new Stack<>();
-        currentTileAction = new ArrayList<>();
-
-        fileChooser = new JFileChooser();
-        fileChooser.setAcceptAllFileFilterUsed(false);
-        FileNameExtensionFilter filter = new FileNameExtensionFilter(
-                "Level File (*.lvl, *.level)", "lvl", "level"
-        );
-        fileChooser.setFileFilter(filter);
-
         // Add the necessary mouse input listeners for moving the viewport
         addMouseWheelListener(this);
         addMouseListener(this);
@@ -112,7 +83,7 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         getActionMap().put("undo", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                undo();
+                LEVEL_MANAGER.getCurrentLevel().undo();
             }
         });
 
@@ -120,11 +91,9 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         getActionMap().put("redo", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                redo();
+                LEVEL_MANAGER.getCurrentLevel().redo();
             }
         });
-
-
     }
 
     /**
@@ -133,7 +102,7 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
      * @param g2 The Graphics2D object to handle the graphics resources.
      */
     public void drawGrid(Graphics2D g2) {
-        if (levelManager.getCurrentLevel().getNumLayers() <= 0) return;
+        if (LEVEL_MANAGER.getCurrentLevel().getNumLayers() <= 0) return;
 
         double scaledSize = TILE_SIZE * scale;
 
@@ -142,18 +111,18 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         int scaledSizeInt = (int) Math.ceil(scaledSize);
 
         // Draw vertical grid lines
-        for (int x = 0; x <= levelManager.getCurrentLevel().getWidth(); x++) {
+        for (int x = 0; x <= LEVEL_MANAGER.getCurrentLevel().getWidth(); x++) {
             int xPos2 = (int) (x * scaledSize) + xPos;
-            g2.drawLine(xPos2, yPos, xPos2, yPos + (int) (levelManager.getCurrentLevel().getHeight() * scaledSize));
+            g2.drawLine(xPos2, yPos, xPos2, yPos + (int) (LEVEL_MANAGER.getCurrentLevel().getHeight() * scaledSize));
         }
 
         // Draw horizontal grid lines
-        for (int y = 0; y <= levelManager.getCurrentLevel().getHeight(); y++) {
+        for (int y = 0; y <= LEVEL_MANAGER.getCurrentLevel().getHeight(); y++) {
             int yPos2 = (int) (y * scaledSize) + yPos;
-            g2.drawLine(xPos, yPos2, xPos + (int) (levelManager.getCurrentLevel().getWidth() * scaledSize), yPos2);
+            g2.drawLine(xPos, yPos2, xPos + (int) (LEVEL_MANAGER.getCurrentLevel().getWidth() * scaledSize), yPos2);
         }
 
-        levelManager.getCurrentLevel().draw(g2, this, xPos, yPos, scaledSize);
+        LEVEL_MANAGER.getCurrentLevel().draw(g2, xPos, yPos, scaledSize);
 
         if ((selectX != -1) && (selectY != -1)) {
             g2.setColor(Color.RED);
@@ -195,8 +164,8 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
     private void selectTile(Point point) {
         Point pos = screenToGrid(point);
 
-        if ((pos.x >= 0 && pos.x < levelManager.getCurrentLevel().getWidth()) &&
-                (pos.y >= 0 && pos.y < levelManager.getCurrentLevel().getHeight())) {
+        if ((pos.x >= 0 && pos.x < LEVEL_MANAGER.getCurrentLevel().getWidth()) &&
+                (pos.y >= 0 && pos.y < LEVEL_MANAGER.getCurrentLevel().getHeight())) {
             selectX = pos.x;
             selectY = pos.y;
         } else {
@@ -223,67 +192,11 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
         return new Point(x, y);
     }
 
-    /**
-     * Prompts the user to name the level and choose where to save the file.
-     *
-     * @throws IOException If the file is unable to be written.
-     */
-    public void exportLevelFile() throws IOException {
-        String levelName = JOptionPane.showInputDialog(
-                null,
-                "Enter a name for the level (this is not the file name!):", "Layer Name",
-                JOptionPane.PLAIN_MESSAGE
-        );
-
-        int val = fileChooser.showSaveDialog(null);
-
-        if (val != JFileChooser.APPROVE_OPTION) return;
-
-        if (levelName == null || levelName.trim().isEmpty()) return;
-
-        LevelData levelData = new LevelData(levelManager.getCurrentLevel(), levelName);
-
-        File fileToSave = fileChooser.getSelectedFile();
-        ObjectOutputStream outputStream = new ObjectOutputStream(Files.newOutputStream(fileToSave.toPath()));
-
-        outputStream.writeObject(levelData);
-
-        outputStream.close();
-    }
-
-    private void undo() {
-        System.out.println("action history size: " + actionHistory.size());
-        System.out.println("current action index: " + currentActionIndex);
-
-        if (actionHistory.isEmpty() || (currentActionIndex < 0)) return;
-
-        actionHistory.get(currentActionIndex).undoAction();
-        currentActionIndex--;
-
-        repaint();
-    }
-
-    private void redo() {
-        System.out.println("action history size: " + actionHistory.size());
-        System.out.println("current action index: " + currentActionIndex);
-
-        if (actionHistory.isEmpty() || (currentActionIndex >= actionHistory.size() - 1)) return;
-
-        actionHistory.get(currentActionIndex + 1).redoAction();
-        currentActionIndex++;
-
-        repaint();
-    }
-
     private void paintLevel(Point point) {
         if ((EDITOR.mode == EditorMode.DRAW) || (EDITOR.mode == EditorMode.ERASE)) {
             Tile tileToPaint = (EDITOR.mode == EditorMode.ERASE) ? null : EDITOR.getCurrentTile();
 
-            levelManager.getCurrentLevel().paintTiles(
-                    screenToGrid(point),
-                    screenToGrid(prevPaintPoint),
-                    tileToPaint, currentTileAction
-            );
+            LEVEL_MANAGER.getCurrentLevel().paintTiles(screenToGrid(point), screenToGrid(prevPaintPoint), tileToPaint);
 
             repaint();
         }
@@ -328,24 +241,8 @@ public class LevelCanvas extends JPanel implements MouseWheelListener, MouseList
 
             repaint(); // Repaint the viewport
         } else if (SwingUtilities.isLeftMouseButton(e)) {
-            if (!currentTileAction.isEmpty()) {
-                if (currentActionIndex < actionHistory.size() - 1) {
-                    for (int i = actionHistory.size() - 1; i > currentActionIndex; i--) {
-                        actionHistory.pop();
-                    }
-                }
+            LEVEL_MANAGER.getCurrentLevel().completeTileAction();
 
-                TileAction[] actions = new TileAction[currentTileAction.size()];
-                currentTileAction.toArray(actions);
-
-                actionHistory.add(new TileHistory(LevelManager.INSTANCE.getCurrentLevel().getCurrentLayer(), actions));
-                currentActionIndex++;
-
-                System.out.println("action history size: " + actionHistory.size());
-                System.out.println("current action index: " + currentActionIndex);
-            }
-
-            currentTileAction = new ArrayList<>();
             prevPaintPoint = null;
         }
     }

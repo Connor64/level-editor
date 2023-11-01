@@ -1,67 +1,68 @@
 package UIComponents;
 
+import Content.Layer;
 import Core.EditorConstants;
+import Core.EditorWindow;
+import Core.LevelManager;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 
 public class LayerIcon extends JPanel {
-    private String layerName;
-    private boolean selected = false;
-    private LayerContainer container;
+    private JButton layerButton;
 
-    public LayerIcon(String layerName) {
-        this.layerName = layerName;
+    private final LevelManager LEVEL_MANAGER;
 
-        container = (LayerContainer) getParent();
+    public LayerIcon(String layerName, Layer layer, BufferedImage[] icons) {
+        LEVEL_MANAGER = EditorWindow.INSTANCE.getLevelManager();
 
-        // Load icon images
-        BufferedImage upIcon = null;
-        BufferedImage downIcon = null;
-        BufferedImage deleteIcon = null;
-        try {
-            upIcon = ImageIO.read(new File("icons/up_icon.png"));
-            downIcon = ImageIO.read(new File("icons/down_icon.png"));
-            deleteIcon = ImageIO.read(new File("icons/delete_icon.png"));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        JButton editNameButton = new JButton();
+        editNameButton.setIcon(new ImageIcon(icons[0]));
+        editNameButton.addActionListener(e -> {
+            String newName = JOptionPane.showInputDialog(
+                    null,
+                    "Rename the layer:", "Layer Name",
+                    JOptionPane.PLAIN_MESSAGE
+            );
+
+            if (newName == null || newName.trim().isEmpty()) return;
+
+            LEVEL_MANAGER.getCurrentLevel().renameLayer(layer, newName);
+        });
+        editNameButton.setBackground(EditorConstants.BUTTON_COLOR);
+        editNameButton.setPreferredSize(new Dimension(32, 32));
 
         // Configure layer select button
-        JButton layerButton = new JButton(layerName);
+        layerButton = new JButton(layerName);
         layerButton.addActionListener(e -> {
-            System.out.println("selected " + layerName);
-
+            LEVEL_MANAGER.getCurrentLevel().setCurrentLayer(layer);
         });
-        setSelected(false);
+        layerButton.setBackground(EditorConstants.BUTTON_COLOR);
 
         // Configure the delete button
         JButton deleteButton = new JButton();
-        deleteButton.setIcon(new ImageIcon(deleteIcon));
+        deleteButton.setIcon(new ImageIcon(icons[1]));
         deleteButton.addActionListener(e -> {
-            System.out.println("deleted " + layerName);
+            LEVEL_MANAGER.getCurrentLevel().deleteLayer(layer);
         });
         deleteButton.setBackground(EditorConstants.BUTTON_COLOR);
         deleteButton.setPreferredSize(new Dimension(32, 32));
 
         // Configure up button
         JButton buttonUp = new JButton();
-        buttonUp.setIcon(new ImageIcon(upIcon));
+        buttonUp.setIcon(new ImageIcon(icons[2]));
         buttonUp.addActionListener(e -> {
-            System.out.println("upbutton teehee");
+            LEVEL_MANAGER.getCurrentLevel().shiftLayer(layer, true);
         });
         buttonUp.setBackground(EditorConstants.BUTTON_COLOR);
         buttonUp.setPreferredSize(new Dimension(16, 16));
 
         // Configure down button
         JButton buttonDown = new JButton();
-        buttonDown.setIcon(new ImageIcon(downIcon));
+        buttonDown.setIcon(new ImageIcon(icons[3]));
         buttonDown.addActionListener(e -> {
-            System.out.println("downbutton haha hehe");
+            LEVEL_MANAGER.getCurrentLevel().shiftLayer(layer, false);
         });
         buttonDown.setBackground(EditorConstants.BUTTON_COLOR);
         buttonDown.setPreferredSize(new Dimension(16, 16));
@@ -72,18 +73,21 @@ public class LayerIcon extends JPanel {
         gc.gridx = 0;
         gc.gridy = 0;
         gc.gridheight = 2;
+        add(editNameButton, gc);
+
+        gc.gridx = 1;
         gc.weightx = 1;
         gc.weighty = 1;
         gc.fill = GridBagConstraints.BOTH;
         add(layerButton, gc);
 
-        gc.fill = GridBagConstraints.NONE;
+        gc.gridx = 2;
         gc.weightx = 0;
-        gc.gridx = 1;
+        gc.fill = GridBagConstraints.NONE;
         add(deleteButton, gc);
 
+        gc.gridx = 3;
         gc.gridheight = 1;
-        gc.gridx = 2;
         add(buttonUp, gc);
 
         gc.gridy = 1;
@@ -92,13 +96,7 @@ public class LayerIcon extends JPanel {
         setBackground(Color.LIGHT_GRAY);
     }
 
-    public boolean isSelected() {
-        return selected;
-    }
-
-    public void setSelected(boolean selected) {
-        this.selected = selected;
-
-        setBackground(selected ? EditorConstants.TOGGLE_COLOR : EditorConstants.BUTTON_COLOR);
+    public void toggle() {
+        layerButton.setBackground(EditorConstants.TOGGLE_COLOR);
     }
 }
